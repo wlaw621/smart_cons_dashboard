@@ -44,10 +44,25 @@
       box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
     }
     .card-3d:hover {
-      transform: translateY(-6px) rotateX(2deg) rotateY(-1deg);
-      box-shadow: 0 20px 30px -10px rgba(79, 70, 229, 0.18), 0 12px 16px -8px rgba(0, 0, 0, 0.08);
+      transform: translateY(-4px) rotateX(1deg) rotateY(-1deg);
+      box-shadow: 0 18px 25px -10px rgba(79, 70, 229, 0.16), 0 10px 12px -6px rgba(0, 0, 0, 0.06);
     }
     
+    /* 현재 진행 단계 강조 펄스 효과 */
+    @keyframes activeStepGlow {
+      0%, 100% {
+        box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.4), 0 10px 25px -5px rgba(99, 102, 241, 0.3);
+        transform: translateY(-2px);
+      }
+      50% {
+        box-shadow: 0 0 0 8px rgba(99, 102, 241, 0.15), 0 16px 30px -5px rgba(99, 102, 241, 0.45);
+        transform: translateY(-5px) scale(1.02);
+      }
+    }
+    .active-step-card {
+      animation: activeStepGlow 2.8s infinite ease-in-out;
+    }
+
     /* 스크롤바 커스텀 */
     ::-webkit-scrollbar {
       height: 7px;
@@ -75,11 +90,11 @@
     }
   </style>
 </head>
-<body class="bg-slate-50 text-slate-800 min-h-screen">
+<body class="bg-slate-50 text-slate-800 min-h-screen pb-12">
 
   <!-- 상단 네비게이션 헤더 -->
   <header class="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-sm">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex flex-wrap items-center justify-between gap-3">
       <div class="flex items-center space-x-3 sm:space-x-4">
         <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center text-white text-xl sm:text-2xl shadow-lg shadow-indigo-200">
           <i class="fa-solid fa-building-circle-check"></i>
@@ -89,26 +104,39 @@
             <h1 class="text-lg sm:text-2xl font-black text-slate-900 tracking-tight">무학동 고시원 공사예정표</h1>
             <span class="px-2 py-0.5 text-[11px] sm:text-xs font-bold rounded-full bg-emerald-100 text-emerald-700 border border-emerald-300">공사 진행중</span>
           </div>
-          <p class="text-xs sm:text-sm text-slate-500 font-medium">시공: 더블유디에이치 주식회사 | 공기: 2026.08.06 ~ 2026.10.26</p>
+          <p class="text-xs sm:text-sm text-slate-500 font-medium">시공: 더블유디에이치 주식회사 | 전체 공기: 2026.08.06 ~ 2026.10.26</p>
         </div>
       </div>
 
-      <!-- 우측 컨트롤 버튼: 실시간 동기화 상태 + 새로고침 + 인쇄 -->
-      <div class="flex items-center space-x-2 sm:space-x-3">
+      <!-- 우측 컨트롤: 오늘 날짜 & 날씨 위젯 + 동기화 + 인쇄 -->
+      <div class="flex items-center flex-wrap gap-2.5 sm:gap-3">
+        <!-- 1. 오늘 날짜 및 현장 날씨 위젯 -->
+        <div class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-100/90 border border-slate-200 text-xs text-slate-700 shadow-inner">
+          <div class="flex items-center gap-1.5 font-bold text-slate-800">
+            <i class="fa-regular fa-calendar text-indigo-600"></i>
+            <span id="headerTodayDate">2026년 9월 5일 (토)</span>
+          </div>
+          <span class="text-slate-300">|</span>
+          <div class="flex items-center gap-1.5" id="weatherWidget">
+            <i id="weatherIcon" class="fa-solid fa-cloud-sun text-amber-500 text-sm animate-pulse"></i>
+            <span id="weatherText" class="font-semibold">서울 무학동 24°C 맑음</span>
+          </div>
+        </div>
+
         <!-- 구글 시트 동기화 상태 태그 -->
-        <div id="syncStatus" class="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+        <div id="syncStatus" class="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
           <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
           <span id="syncText">구글시트 연동완료</span>
         </div>
 
         <!-- 동기화 새로고침 버튼 -->
-        <button onclick="fetchSheetData()" id="refreshBtn" class="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 text-xs sm:text-sm font-semibold flex items-center gap-1.5 shadow-sm transition active:scale-95" title="구글 시트의 최신 변경사항을 다시 불러옵니다">
+        <button onclick="fetchSheetData()" id="refreshBtn" class="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 text-xs sm:text-sm font-semibold flex items-center gap-1.5 shadow-sm transition active:scale-95" title="구글 시트 최신 일정 다시 동기화">
           <i id="refreshIcon" class="fa-solid fa-rotate"></i>
           <span class="hidden sm:inline">최신 동기화</span>
         </button>
 
         <!-- 인쇄 / PDF 출력 버튼 -->
-        <button onclick="window.print()" class="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs sm:text-sm font-semibold flex items-center gap-2 shadow-sm transition active:scale-95">
+        <button onclick="window.print()" class="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs sm:text-sm font-semibold flex items-center gap-2 shadow-sm transition active:scale-95">
           <i class="fa-solid fa-print"></i>
           <span class="hidden sm:inline">인쇄 / PDF</span>
         </button>
@@ -118,42 +146,115 @@
 
   <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
 
-    <!-- KPI 요약 지표 (입체 카드) -->
-    <section class="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-      <div class="card-3d bg-white p-5 rounded-2xl border border-slate-100 relative overflow-hidden">
+    <!-- KPI 요약 지표 (요구사항 2, 3, 4 반영) -->
+    <section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+      
+      <!-- 2. 공사 기간 경과 및 잔여일 표시 카드 -->
+      <div class="card-3d bg-white p-5 rounded-2xl border border-slate-100 relative overflow-hidden flex flex-col justify-between">
         <div class="absolute -right-3 -bottom-3 text-indigo-50 text-7xl font-black pointer-events-none">82</div>
-        <div class="flex items-center gap-3 text-indigo-600 font-semibold text-xs sm:text-sm uppercase tracking-wider mb-2">
-          <i class="fa-solid fa-calendar-days"></i> 전체 공사 기간
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-indigo-600 font-bold text-xs uppercase tracking-wider flex items-center gap-1.5">
+              <i class="fa-solid fa-hourglass-half"></i> 공사 기간 진행 현황
+            </span>
+            <span class="text-[11px] font-extrabold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-md" id="kpiElapsedBadge">31일 경과</span>
+          </div>
+          <div class="text-2xl sm:text-3xl font-black text-slate-900 flex items-baseline gap-2">
+            <span id="kpiRemainingDays">D-51</span>
+            <span class="text-xs text-slate-500 font-semibold">(총 82일 중)</span>
+          </div>
+          <!-- 프로그레스 바 -->
+          <div class="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden mt-3 ring-1 ring-slate-200/70">
+            <div id="kpiProgressBar" class="bg-gradient-to-r from-indigo-500 to-violet-600 h-full rounded-full transition-all duration-700" style="width: 37.8%;"></div>
+          </div>
         </div>
-        <div class="text-2xl sm:text-3xl font-extrabold text-slate-900">82일간</div>
-        <div class="text-xs text-slate-500 mt-1 font-medium">2026.08.06 ~ 2026.10.26</div>
+        <div class="text-xs text-slate-500 mt-3 font-medium flex justify-between">
+          <span>시작: 08.06</span>
+          <span class="font-bold text-indigo-600">진행률 37.8%</span>
+          <span>준공: 10.26</span>
+        </div>
       </div>
 
-      <div class="card-3d bg-white p-5 rounded-2xl border border-slate-100 relative overflow-hidden">
-        <div class="absolute -right-3 -bottom-3 text-emerald-50 text-7xl font-black pointer-events-none" id="kpiProgressBg">38%</div>
-        <div class="flex items-center gap-3 text-emerald-600 font-semibold text-xs sm:text-sm uppercase tracking-wider mb-2">
-          <i class="fa-solid fa-chart-pie"></i> 계획 공정률 (09/05 기준)
+      <!-- 3. 세부 공정 이벤트: 완료 / 진행중 / 준비중 3단 카운트 & 클릭 시 목록 팝업 -->
+      <div class="card-3d bg-white p-5 rounded-2xl border border-slate-100 relative overflow-hidden flex flex-col justify-between">
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-slate-600 font-bold text-xs uppercase tracking-wider flex items-center gap-1.5">
+              <i class="fa-solid fa-layer-group"></i> 세부 공정 이벤트 (전체 73건)
+            </span>
+            <span class="text-[10px] text-slate-400 font-medium">클릭 시 목록 나열</span>
+          </div>
+          
+          <!-- 완료 / 진행중 / 준비중 선택 버튼 -->
+          <div class="grid grid-cols-3 gap-2 mt-2">
+            <button onclick="openTaskListModal('completed')" class="group p-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-200/80 transition text-left">
+              <div class="text-[11px] font-bold text-emerald-700 flex items-center justify-between">
+                <span>완료</span>
+                <i class="fa-solid fa-check text-[10px] opacity-70 group-hover:scale-125 transition"></i>
+              </div>
+              <div class="text-lg font-black text-emerald-800 mt-1" id="countCompleted">20</div>
+            </button>
+
+            <button onclick="openTaskListModal('ongoing')" class="group p-2 rounded-xl bg-indigo-50 hover:bg-indigo-100 border border-indigo-200/80 transition text-left ring-2 ring-indigo-500/20">
+              <div class="text-[11px] font-bold text-indigo-700 flex items-center justify-between">
+                <span>진행중</span>
+                <span class="w-2 h-2 rounded-full bg-indigo-600 animate-ping"></span>
+              </div>
+              <div class="text-lg font-black text-indigo-800 mt-1" id="countOngoing">1</div>
+            </button>
+
+            <button onclick="openTaskListModal('upcoming')" class="group p-2 rounded-xl bg-amber-50 hover:bg-amber-100 border border-amber-200/80 transition text-left">
+              <div class="text-[11px] font-bold text-amber-700 flex items-center justify-between">
+                <span>준비중</span>
+                <i class="fa-solid fa-clock text-[10px] opacity-70 group-hover:scale-125 transition"></i>
+              </div>
+              <div class="text-lg font-black text-amber-800 mt-1" id="countUpcoming">52</div>
+            </button>
+          </div>
         </div>
-        <div class="text-2xl sm:text-3xl font-extrabold text-emerald-600" id="kpiProgressText">37.8%</div>
-        <div class="text-xs text-slate-500 mt-1 font-medium">31일 경과 / 51일 잔여</div>
+        <p class="text-[11px] text-slate-400 mt-3 font-medium text-center">각 항목을 누르면 해당 공정 목록이 펼쳐집니다</p>
       </div>
 
-      <div class="card-3d bg-white p-5 rounded-2xl border border-slate-100 relative overflow-hidden">
-        <div class="absolute -right-3 -bottom-3 text-amber-50 text-7xl font-black pointer-events-none" id="kpiEventCountBg">73</div>
-        <div class="flex items-center gap-3 text-amber-600 font-semibold text-xs sm:text-sm uppercase tracking-wider mb-2">
-          <i class="fa-solid fa-list-check"></i> 세부 공정 이벤트
+      <!-- 4. 금일(Today) 주요 작업 카드 -->
+      <div class="card-3d bg-gradient-to-br from-indigo-600 to-violet-700 text-white p-5 rounded-2xl shadow-xl shadow-indigo-100 relative overflow-hidden flex flex-col justify-between">
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-indigo-200 font-bold text-xs uppercase tracking-wider flex items-center gap-1.5">
+              <i class="fa-solid fa-calendar-check"></i> 금일 (09/05 토) 주요 작업
+            </span>
+            <span class="px-2 py-0.5 rounded-full bg-rose-500 text-white text-[10px] font-bold">당일 집중</span>
+          </div>
+          <div class="text-xl sm:text-2xl font-black mt-1 tracking-tight" id="todayTaskTitle">창문 벽체 철거 4차</div>
+          <div class="text-xs text-indigo-100 mt-1 font-medium leading-snug" id="todayTaskDesc">
+            인테리어 마감 &gt; 철거공사 (최종 잔여 창문 개구부 벽체 철거 작업)
+          </div>
         </div>
-        <div class="text-2xl sm:text-3xl font-extrabold text-slate-900" id="kpiEventCountText">73개 항목</div>
-        <div class="text-xs text-slate-500 mt-1 font-medium">마감 / 전기 / 기계설비 공정</div>
+        <div class="mt-3 pt-2.5 border-t border-indigo-400/40 flex items-center justify-between text-xs text-indigo-100">
+          <span>현장 안전 관리 감독</span>
+          <span class="font-bold bg-white/20 px-2 py-0.5 rounded">철거 완료 단계</span>
+        </div>
       </div>
 
-      <div class="card-3d bg-gradient-to-br from-indigo-600 to-violet-700 text-white p-5 rounded-2xl shadow-xl shadow-indigo-100 relative overflow-hidden">
-        <div class="flex items-center gap-3 text-indigo-200 font-semibold text-xs sm:text-sm uppercase tracking-wider mb-2">
-          <i class="fa-solid fa-calendar-day"></i> 금일 (09.05 토) 주요 작업
+      <!-- 4. 명일(Tomorrow) 주요 작업 카드 -->
+      <div class="card-3d bg-white p-5 rounded-2xl border border-slate-100 relative overflow-hidden flex flex-col justify-between">
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-slate-700 font-bold text-xs uppercase tracking-wider flex items-center gap-1.5">
+              <i class="fa-solid fa-calendar-plus text-amber-500"></i> 명일 (09/06 일) 및 차주 착수
+            </span>
+            <span class="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[10px] font-bold">내일 / 차주</span>
+          </div>
+          <div class="text-xl sm:text-2xl font-black text-slate-900 mt-1 tracking-tight" id="tomorrowTaskTitle">현장 정리 &amp; 차주 양중 준비</div>
+          <div class="text-xs text-slate-600 mt-1 font-medium leading-snug" id="tomorrowTaskDesc">
+            09/07(월) ALC 자재양중 및 창호 우레탄 단열 뿜칠 착수 예정
+          </div>
         </div>
-        <div class="text-lg sm:text-2xl font-extrabold">창문 벽체 철거 4차</div>
-        <div class="text-xs text-indigo-100 mt-1 font-medium">차주 집중: 09/07 ALC 자재양중</div>
+        <div class="mt-3 pt-2.5 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+          <span>집중 공정 예고</span>
+          <span class="font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded">ALC 벽체 조성</span>
+        </div>
       </div>
+
     </section>
 
     <!-- 구글 시트 원본 바로가기 배너 -->
@@ -163,7 +264,7 @@
           <i class="fa-solid fa-table"></i>
         </div>
         <div>
-          <span class="font-bold text-slate-900">구글 스프레드시트 실시간 연동 활성화</span>
+          <span class="font-bold text-slate-900">구글 스프레드시트 실시간 양방향 연동 활성화</span>
           <p class="text-slate-500 mt-0.5" id="syncDetailText">구글 시트에서 일정이나 작업명을 변경하면 [최신 동기화]를 통해 즉시 대시보드에 반영됩니다.</p>
         </div>
       </div>
@@ -173,70 +274,73 @@
       </a>
     </div>
 
-    <!-- 1. 핵심 7단계 로드맵 (입체적 단계 플로우) -->
+    <!-- 5. 7단계 공정 진행 단계 타임라인 (입체적 단계 플로우 & 현재 진행 강조) -->
     <section class="bg-white rounded-3xl p-6 sm:p-8 border border-slate-100 shadow-sm">
       <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-6">
         <div>
           <span class="text-xs font-bold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-md tracking-wide">PHASE ROADMAP</span>
-          <h2 class="text-xl sm:text-2xl font-extrabold text-slate-900 mt-1">입체 공정 파이프라인 (7단계 요약)</h2>
+          <h2 class="text-xl sm:text-2xl font-extrabold text-slate-900 mt-1">7단계 공정 진행 단계 타임라인</h2>
         </div>
-        <p class="text-xs sm:text-sm text-slate-500">전체 공정의 시공 흐름을 단계별로 직관화합니다.</p>
+        <p class="text-xs sm:text-sm text-slate-500">현재 공정이 진행 중인 단계를 반짝임과 함께 직관적으로 강조합니다.</p>
       </div>
 
       <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-3 sm:gap-4 relative">
-        <!-- 1단계 -->
-        <div class="card-3d bg-slate-50 hover:bg-slate-100/80 p-4 rounded-2xl border-t-4 border-rose-500 flex flex-col justify-between">
+        <!-- 1단계: 철거 & 가설 (현재 오늘 9/5 완료 마감 중인 활성 단계) -->
+        <div class="card-3d active-step-card bg-indigo-50/70 hover:bg-indigo-50 p-4 rounded-2xl border-t-4 border-indigo-600 ring-2 ring-indigo-500/50 flex flex-col justify-between">
           <div>
-            <span class="text-[11px] font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded">STEP 01</span>
-            <h3 class="font-bold text-slate-900 text-base mt-2">철거 & 가설</h3>
-            <p class="text-xs text-slate-500 font-medium mt-1">8/06 ~ 9/05</p>
-            <ul class="text-xs text-slate-600 space-y-1 mt-3">
+            <div class="flex items-center justify-between">
+              <span class="text-[11px] font-extrabold text-indigo-700 bg-indigo-100 px-2 py-0.5 rounded">STEP 01</span>
+              <span class="animate-ping w-2.5 h-2.5 rounded-full bg-indigo-600"></span>
+            </div>
+            <h3 class="font-extrabold text-indigo-950 text-base mt-2">철거 &amp; 가설</h3>
+            <p class="text-xs text-indigo-600 font-bold mt-1">8/06 ~ 9/05 (금일 마감)</p>
+            <ul class="text-xs text-slate-700 space-y-1 mt-3">
               <li>• 먹메김 및 현장정리</li>
-              <li>• 창문 벽체 4회 철거</li>
+              <li>• <b>창문 벽체 4회 철거 (금일)</b></li>
               <li>• 스카이 장비 투입</li>
             </ul>
           </div>
-          <span class="mt-4 text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded text-center">완료 단계</span>
+          <div class="mt-4 flex items-center justify-center gap-1.5 text-[11px] font-extrabold text-indigo-700 bg-white/90 border border-indigo-200 py-1 rounded-lg shadow-sm">
+            <span class="w-1.5 h-1.5 rounded-full bg-indigo-600 animate-pulse"></span>
+            <span>현재 진행중</span>
+          </div>
         </div>
 
         <!-- 2단계 -->
-        <div class="card-3d bg-slate-50 hover:bg-slate-100/80 p-4 rounded-2xl border-t-4 border-amber-500 flex flex-col justify-between">
+        <div class="card-3d bg-slate-50 hover:bg-slate-100/80 p-4 rounded-2xl border-t-4 border-emerald-500 flex flex-col justify-between">
           <div>
-            <span class="text-[11px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded">STEP 02</span>
+            <span class="text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">STEP 02</span>
             <h3 class="font-bold text-slate-900 text-base mt-2">설비 기초 배관</h3>
             <p class="text-xs text-slate-500 font-medium mt-1">8/18 ~ 8/31</p>
             <ul class="text-xs text-slate-600 space-y-1 mt-3">
               <li>• 바닥 모서리 테두리 방수</li>
               <li>• 천정 전열/통신/조명 배관</li>
-              <li>• 주방/욕실 덕트 & 에어컨</li>
+              <li>• 주방/욕실 덕트 &amp; 에어컨</li>
             </ul>
           </div>
-          <span class="mt-4 text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded text-center">완료 단계</span>
+          <span class="mt-4 text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded text-center">완료</span>
         </div>
 
-        <!-- 3단계 -->
-        <div class="card-3d bg-indigo-50/50 hover:bg-indigo-50 p-4 rounded-2xl border-t-4 border-indigo-600 ring-2 ring-indigo-500/20 flex flex-col justify-between">
+        <!-- 3단계 (차주 착수) -->
+        <div class="card-3d bg-slate-50 hover:bg-slate-100/80 p-4 rounded-2xl border-t-4 border-amber-500 flex flex-col justify-between">
           <div>
-            <div class="flex items-center justify-between">
-              <span class="text-[11px] font-bold text-indigo-700 bg-indigo-100 px-2 py-0.5 rounded">STEP 03</span>
-              <span class="animate-pulse w-2 h-2 rounded-full bg-indigo-600"></span>
-            </div>
-            <h3 class="font-bold text-indigo-950 text-base mt-2">ALC벽체 & 난방</h3>
-            <p class="text-xs text-indigo-600 font-medium mt-1">9/07 ~ 9/16</p>
-            <ul class="text-xs text-slate-700 space-y-1 mt-3">
-              <li>• ALC 자재양중 & 벽체조성</li>
-              <li>• 급수/위생배관 & 난방</li>
+            <span class="text-[11px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded">STEP 03</span>
+            <h3 class="font-bold text-slate-900 text-base mt-2">ALC벽체 &amp; 난방</h3>
+            <p class="text-xs text-amber-600 font-bold mt-1">9/07 ~ 9/16 (차주)</p>
+            <ul class="text-xs text-slate-600 space-y-1 mt-3">
+              <li>• ALC 자재양중 &amp; 벽체조성</li>
+              <li>• 급수/위생배관 &amp; 난방</li>
               <li>• <b>9/16 바닥 몰탈타설</b></li>
             </ul>
           </div>
-          <span class="mt-4 text-[10px] font-bold text-indigo-700 bg-indigo-100 px-2 py-1 rounded text-center">현재 집중 주간</span>
+          <span class="mt-4 text-[10px] font-bold text-amber-700 bg-amber-100 px-2 py-1 rounded text-center">다음 착수 예정</span>
         </div>
 
         <!-- 4단계 -->
         <div class="card-3d bg-slate-50 hover:bg-slate-100/80 p-4 rounded-2xl border-t-4 border-cyan-500 flex flex-col justify-between">
           <div>
             <span class="text-[11px] font-bold text-cyan-600 bg-cyan-50 px-2 py-0.5 rounded">STEP 04</span>
-            <h3 class="font-bold text-slate-900 text-base mt-2">목공 & 3차방수</h3>
+            <h3 class="font-bold text-slate-900 text-base mt-2">목공 &amp; 3차방수</h3>
             <p class="text-xs text-slate-500 font-medium mt-1">9/17 ~ 9/24</p>
             <ul class="text-xs text-slate-600 space-y-1 mt-3">
               <li>• 몰탈 양생 (9/17~18)</li>
@@ -244,49 +348,49 @@
               <li>• 화장실/기계실 3차도막방수</li>
             </ul>
           </div>
-          <span class="mt-4 text-[10px] font-bold text-slate-500 bg-slate-200/60 px-2 py-1 rounded text-center">예정</span>
+          <span class="mt-4 text-[10px] font-bold text-slate-500 bg-slate-200/60 px-2 py-1 rounded text-center">준비중</span>
         </div>
 
         <!-- 5단계 -->
-        <div class="card-3d bg-slate-50 hover:bg-slate-100/80 p-4 rounded-2xl border-t-4 border-emerald-500 flex flex-col justify-between">
+        <div class="card-3d bg-slate-50 hover:bg-slate-100/80 p-4 rounded-2xl border-t-4 border-teal-500 flex flex-col justify-between">
           <div>
-            <span class="text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">STEP 05</span>
+            <span class="text-[11px] font-bold text-teal-600 bg-teal-50 px-2 py-0.5 rounded">STEP 05</span>
             <h3 class="font-bold text-slate-900 text-base mt-2">타일·도장·도배</h3>
             <p class="text-xs text-slate-500 font-medium mt-1">9/29 ~ 10/16</p>
             <ul class="text-xs text-slate-600 space-y-1 mt-3">
               <li>• 화장실/복도 타일시공</li>
-              <li>• 복도 퍼티 & 도장뿜칠</li>
-              <li>• 인테리어필름 & 도배작업</li>
+              <li>• 복도 퍼티 &amp; 도장뿜칠</li>
+              <li>• 인테리어필름 &amp; 도배작업</li>
             </ul>
           </div>
-          <span class="mt-4 text-[10px] font-bold text-slate-500 bg-slate-200/60 px-2 py-1 rounded text-center">예정</span>
+          <span class="mt-4 text-[10px] font-bold text-slate-500 bg-slate-200/60 px-2 py-1 rounded text-center">준비중</span>
         </div>
 
         <!-- 6단계 -->
         <div class="card-3d bg-slate-50 hover:bg-slate-100/80 p-4 rounded-2xl border-t-4 border-purple-500 flex flex-col justify-between">
           <div>
             <span class="text-[11px] font-bold text-purple-600 bg-purple-50 px-2 py-0.5 rounded">STEP 06</span>
-            <h3 class="font-bold text-slate-900 text-base mt-2">가구 & 기구취부</h3>
+            <h3 class="font-bold text-slate-900 text-base mt-2">가구 &amp; 기구취부</h3>
             <p class="text-xs text-slate-500 font-medium mt-1">10/09 ~ 10/24</p>
             <ul class="text-xs text-slate-600 space-y-1 mt-3">
               <li>• 수전/위생기구/보일러설치</li>
-              <li>• 바닥마감재 & 객실가구</li>
+              <li>• 바닥마감재 &amp; 객실가구</li>
               <li>• 조명/간판/가전/도어락</li>
             </ul>
           </div>
-          <span class="mt-4 text-[10px] font-bold text-slate-500 bg-slate-200/60 px-2 py-1 rounded text-center">예정</span>
+          <span class="mt-4 text-[10px] font-bold text-slate-500 bg-slate-200/60 px-2 py-1 rounded text-center">준비중</span>
         </div>
 
         <!-- 7단계 -->
         <div class="card-3d bg-slate-50 hover:bg-slate-100/80 p-4 rounded-2xl border-t-4 border-blue-600 flex flex-col justify-between">
           <div>
             <span class="text-[11px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded">STEP 07</span>
-            <h3 class="font-bold text-slate-900 text-base mt-2">검사 & 준공청소</h3>
+            <h3 class="font-bold text-slate-900 text-base mt-2">검사 &amp; 준공청소</h3>
             <p class="text-xs text-slate-500 font-medium mt-1">10/19 ~ 10/26</p>
             <ul class="text-xs text-slate-600 space-y-1 mt-3">
               <li>• 소방점검 접수 (10/19)</li>
               <li>• 전기안전점검 (10/23)</li>
-              <li>• <b>10/25 준공청소 & 마감</b></li>
+              <li>• <b>10/25 준공청소 &amp; 마감</b></li>
             </ul>
           </div>
           <span class="mt-4 text-[10px] font-bold text-slate-500 bg-slate-200/60 px-2 py-1 rounded text-center">최종 검수</span>
@@ -374,6 +478,36 @@
 
   </main>
 
+  <!-- 3번 요구사항: 완료/진행중/준비중 세부 공정 나열 모달 팝업 -->
+  <div id="taskListModal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-2xl w-full max-h-[85vh] shadow-2xl flex flex-col overflow-hidden border border-slate-200 animate-in fade-in zoom-in duration-200">
+      <div class="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+        <div class="flex items-center gap-3">
+          <div id="modalIconBox" class="w-10 h-10 rounded-2xl flex items-center justify-center text-lg">
+            <i id="modalIcon" class="fa-solid fa-list-check"></i>
+          </div>
+          <div>
+            <h3 class="text-lg font-bold text-slate-900" id="modalTitle">공정 목록</h3>
+            <p class="text-xs text-slate-500" id="modalSubtitle">상세 공정 이벤트 내역</p>
+          </div>
+        </div>
+        <button onclick="closeTaskListModal()" class="w-8 h-8 rounded-full bg-slate-200/70 hover:bg-slate-300 text-slate-600 flex items-center justify-center transition">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="p-6 overflow-y-auto space-y-3" id="modalContentList">
+        <!-- 동적으로 공정 리스트 삽입 -->
+      </div>
+
+      <div class="p-4 border-t border-slate-100 bg-slate-50 text-right">
+        <button onclick="closeTaskListModal()" class="px-5 py-2 rounded-xl bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold shadow transition">
+          닫기
+        </button>
+      </div>
+    </div>
+  </div>
+
   <footer class="bg-white border-t border-slate-200 py-6 mt-12 text-center text-xs text-slate-400">
     <p>무학동 고시원 공사예정표 (WORK SCHEDULE) • 원본작성일: 2026년 09월 04일 • 현장책임자: 김동현</p>
   </footer>
@@ -382,7 +516,11 @@
     // 사용자 제공 구글 시트 게시 CSV URL
     const GOOGLE_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRAAXChTqEOfI-6Zjak1fc32gi9Zmou-n-oq3O17lhNHAyapg59YLUIleoVet17FA/pub?gid=1236538753&single=true&output=csv";
 
-    // 오프라인 / 네트워크 지연 시 보장되는 기본 73개 검증 데이터셋 (Fallback Data)
+    // 기준 오늘 날짜 (2026-09-05 토요일)
+    const TODAY_STR = "2026-09-05";
+    const TOMORROW_STR = "2026-09-06";
+
+    // 기본 데이터셋 (구글 시트 연동 전/네트워크 지연 시 보장)
     const fallbackEvents = [
       { date: "2026-08-15", dow: "토", cat1: "인테리어 마감 공사", cat2: "철거 공사", task: "창문위치 벽체철거", val: "철거작업 (1차)" },
       { date: "2026-08-15", dow: "토", cat1: "인테리어 마감 공사", cat2: "철거 공사", task: "장비사용 (스카이)", val: "스카이 장비 설치" },
@@ -403,7 +541,7 @@
       { date: "2026-09-02", dow: "수", cat1: "인테리어 마감 공사", cat2: "금속 공사", task: "금속 공사", val: "금속공사 현장미팅" },
       { date: "2026-09-03", dow: "목", cat1: "인테리어 마감 공사", cat2: "금속 공사", task: "금속 공사", val: "금속 구조 시공" },
       { date: "2026-09-03", dow: "목", cat1: "공통", cat2: "가설 공사", task: "폐기물 반출", val: "현장정리 및 폐기물반출 (2차)" },
-      { date: "2026-09-05", dow: "토", cat1: "인테리어 마감 공사", cat2: "철거 공사", task: "창문위치 벽체철거", val: "철거작업 (4차)" },
+      { date: "2026-09-05", dow: "토", cat1: "인테리어 마감 공사", cat2: "철거 공사", task: "창문위치 벽체철거", val: "창문 벽체 철거 4차" },
       { date: "2026-09-07", dow: "월", cat1: "인테리어 마감 공사", cat2: "ALC 공사", task: "벽체 조성", val: "ALC 블록 자재양중" },
       { date: "2026-09-07", dow: "월", cat1: "인테리어 마감 공사", cat2: "단열 공사", task: "단열 뿜칠작업", val: "창호 우레탄 단열뿜칠작업" },
       { date: "2026-09-07", dow: "월", cat1: "기계 설비 공사", cat2: "가스설비공사", task: "배관 작업", val: "도시가스 현장체크" },
@@ -457,10 +595,8 @@
       { date: "2026-10-26", dow: "월", cat1: "인테리어 마감 공사", cat2: "가구 공사", task: "주방 가구", val: "공용 주방가구 반입 및 최종 설치" }
     ];
 
-    // 현재 활성화된 이벤트 목록 (구글 시트 연동 후 동적으로 업데이트됨)
     let currentEvents = [...fallbackEvents];
     let taskGroups = {};
-
     let currentCategory = 'all';
     let searchQuery = '';
     let selectedCalMonth = 9;
@@ -468,6 +604,155 @@
     const baseStart = new Date('2026-08-06').getTime();
     const baseEnd = new Date('2026-10-26').getTime();
     const totalDuration = baseEnd - baseStart;
+
+    // 1. 서울 중구 무학동 날씨 가져오기 (Open-Meteo API: 무학동 좌표 위도 37.564, 경도 127.022)
+    async function loadTodayWeather() {
+      try {
+        const res = await fetch('https://api.open-meteo.com/v1/forecast?latitude=37.564&longitude=127.022&current_weather=true');
+        if (!res.ok) throw new Error("날씨 호출 오류");
+        const data = await res.json();
+        const weather = data.current_weather;
+        const temp = Math.round(weather.temperature);
+        const code = weather.weathercode;
+
+        let icon = "fa-sun text-amber-500";
+        let desc = "맑음";
+        if (code >= 1 && code <= 3) { icon = "fa-cloud-sun text-amber-400"; desc = "구름조금"; }
+        else if (code >= 45 && code <= 48) { icon = "fa-smog text-slate-400"; desc = "안개"; }
+        else if (code >= 51 && code <= 67) { icon = "fa-cloud-rain text-blue-500"; desc = "비"; }
+        else if (code >= 71 && code <= 86) { icon = "fa-snowflake text-cyan-400"; desc = "눈"; }
+        else if (code >= 95) { icon = "fa-cloud-bolt text-purple-500"; desc = "뇌우"; }
+
+        document.getElementById('weatherIcon').className = `fa-solid ${icon} text-sm`;
+        document.getElementById('weatherText').innerText = `서울 무학동 ${temp}°C ${desc}`;
+      } catch (err) {
+        console.warn("날씨 API 대체 기본값:", err);
+        document.getElementById('weatherText').innerText = `서울 무학동 24°C 맑음`;
+      }
+    }
+
+    // 2. 공사 기간 경과일 / 잔여일 계산
+    function updatePeriodKPI() {
+      const today = new Date(TODAY_STR).getTime();
+      const start = baseStart;
+      const end = baseEnd;
+
+      const oneDay = 1000 * 60 * 60 * 24;
+      const totalDays = Math.round((end - start) / oneDay) + 1; // 82일
+      const elapsedDays = Math.max(1, Math.min(totalDays, Math.round((today - start) / oneDay) + 1)); // 31일
+      const remainingDays = totalDays - elapsedDays; // 51일
+      const progressPercent = ((elapsedDays / totalDays) * 100).toFixed(1);
+
+      document.getElementById('kpiElapsedBadge').innerText = `${elapsedDays}일 경과`;
+      document.getElementById('kpiRemainingDays').innerText = `D-${remainingDays}`;
+      document.getElementById('kpiProgressBar').style.width = `${progressPercent}%`;
+    }
+
+    // 3. 완료 / 진행중 / 준비중 카운트 분류
+    function getTaskStatus(e) {
+      if (e.date < TODAY_STR) return 'completed';
+      if (e.date === TODAY_STR) return 'ongoing';
+      return 'upcoming';
+    }
+
+    function updateEventStatusCounts() {
+      let completedCount = 0;
+      let ongoingCount = 0;
+      let upcomingCount = 0;
+
+      currentEvents.forEach(e => {
+        const s = getTaskStatus(e);
+        if (s === 'completed') completedCount++;
+        else if (s === 'ongoing') ongoingCount++;
+        else upcomingCount++;
+      });
+
+      document.getElementById('countCompleted').innerText = completedCount;
+      document.getElementById('countOngoing').innerText = ongoingCount;
+      document.getElementById('countUpcoming').innerText = upcomingCount;
+
+      // 4. 금일 및 명일 작업 동적 갱신
+      const todayTasks = currentEvents.filter(e => e.date === TODAY_STR);
+      if (todayTasks.length > 0) {
+        document.getElementById('todayTaskTitle').innerText = todayTasks[0].val;
+        document.getElementById('todayTaskDesc').innerText = `${todayTasks[0].cat1} > ${todayTasks[0].cat2} (${todayTasks[0].task})`;
+      } else {
+        document.getElementById('todayTaskTitle').innerText = "현장 정기 점검";
+        document.getElementById('todayTaskDesc').innerText = "예정된 집중 시공 공정 없음";
+      }
+
+      const tomorrowTasks = currentEvents.filter(e => e.date === TOMORROW_STR);
+      if (tomorrowTasks.length > 0) {
+        document.getElementById('tomorrowTaskTitle').innerText = tomorrowTasks[0].val;
+        document.getElementById('tomorrowTaskDesc').innerText = `${tomorrowTasks[0].cat1} > ${tomorrowTasks[0].cat2} (${tomorrowTasks[0].task})`;
+      } else {
+        document.getElementById('tomorrowTaskTitle').innerText = "현장 정리 & 차주 양중 준비";
+        document.getElementById('tomorrowTaskDesc').innerText = "09/07(월) ALC 자재양중 및 단열 뿜칠 착수 준비";
+      }
+    }
+
+    // 3. 세부 공정 모달 열기
+    function openTaskListModal(statusType) {
+      const modal = document.getElementById('taskListModal');
+      const listContainer = document.getElementById('modalContentList');
+      const title = document.getElementById('modalTitle');
+      const sub = document.getElementById('modalSubtitle');
+      const iconBox = document.getElementById('modalIconBox');
+      const icon = document.getElementById('modalIcon');
+
+      let filtered = [];
+      if (statusType === 'completed') {
+        filtered = currentEvents.filter(e => getTaskStatus(e) === 'completed');
+        title.innerText = `완료된 세부 공정 (${filtered.length}건)`;
+        sub.innerText = "2026.08.06부터 어제(09.04)까지 완료된 현장 공정 항목입니다.";
+        iconBox.className = "w-10 h-10 rounded-2xl flex items-center justify-center text-lg bg-emerald-100 text-emerald-700";
+        icon.className = "fa-solid fa-circle-check";
+      } else if (statusType === 'ongoing') {
+        filtered = currentEvents.filter(e => getTaskStatus(e) === 'ongoing');
+        title.innerText = `현재 진행 중인 공정 (${filtered.length}건)`;
+        sub.innerText = "오늘(2026.09.05 토요일) 집중적으로 진행 중인 현장 공정입니다.";
+        iconBox.className = "w-10 h-10 rounded-2xl flex items-center justify-center text-lg bg-indigo-100 text-indigo-700";
+        icon.className = "fa-solid fa-person-digging";
+      } else {
+        filtered = currentEvents.filter(e => getTaskStatus(e) === 'upcoming');
+        title.innerText = `준비 및 착수 예정 공정 (${filtered.length}건)`;
+        sub.innerText = "내일(09.06)부터 10.26 준공까지 순차적으로 진행될 예정 공정입니다.";
+        iconBox.className = "w-10 h-10 rounded-2xl flex items-center justify-center text-lg bg-amber-100 text-amber-700";
+        icon.className = "fa-solid fa-clock-rotate-left";
+      }
+
+      // 오름차순 정렬
+      filtered.sort((a,b) => new Date(a.date) - new Date(b.date));
+
+      listContainer.innerHTML = filtered.map(item => {
+        let badgeStyle = "bg-slate-100 text-slate-700 border-slate-200";
+        if (item.cat1.includes('인테리어')) badgeStyle = "bg-amber-50 text-amber-800 border-amber-200";
+        if (item.cat1.includes('전기')) badgeStyle = "bg-blue-50 text-blue-800 border-blue-200";
+        if (item.cat1.includes('기계')) badgeStyle = "bg-emerald-50 text-emerald-800 border-emerald-200";
+
+        return `
+          <div class="p-3.5 rounded-2xl border border-slate-200 bg-white hover:border-indigo-300 transition flex items-center justify-between gap-3">
+            <div class="space-y-1">
+              <div class="flex items-center gap-2">
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded border ${badgeStyle}">${item.cat1}</span>
+                <span class="text-xs font-semibold text-slate-500">${item.cat2} &gt; ${item.task}</span>
+              </div>
+              <div class="text-sm font-bold text-slate-900">${item.val}</div>
+            </div>
+            <div class="text-right shrink-0">
+              <span class="text-xs font-bold text-slate-700 block">${item.date}</span>
+              <span class="text-[11px] text-slate-400 font-medium">(${item.dow})</span>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      modal.classList.remove('hidden');
+    }
+
+    function closeTaskListModal() {
+      document.getElementById('taskListModal').classList.add('hidden');
+    }
 
     function getDatePercent(dateStr) {
       const d = new Date(dateStr).getTime();
@@ -497,13 +782,11 @@
         taskGroups[key].events.push(e);
       });
 
-      // KPI 카운트 갱신
-      const count = currentEvents.length;
-      document.getElementById('kpiEventCountText').innerText = `${count}개 항목`;
-      document.getElementById('kpiEventCountBg').innerText = count;
+      updatePeriodKPI();
+      updateEventStatusCounts();
     }
 
-    // 구글 시트 CSV 파싱 및 동적 변환 함수
+    // 구글 시트 CSV 파싱
     function parseGoogleSheetCSV(csvText) {
       const parsed = Papa.parse(csvText, { skipEmptyLines: false });
       const rows = parsed.data;
@@ -512,11 +795,9 @@
         throw new Error("유효한 공정표 시트 데이터가 아닙니다.");
       }
 
-      // 날짜 컬럼 매핑: row 2 (Month), row 3 (Day), row 4 (Dow)
       const dateMap = {};
       let curMonthStr = "2026-08";
 
-      // 5번째 열(인덱스 5)부터 85번째 열까지 날짜 추출
       for (let c = 5; c < rows[3].length; c++) {
         const mVal = rows[2] ? String(rows[2][c] || '') : '';
         if (mVal.includes('8월')) curMonthStr = '2026-08';
@@ -539,7 +820,6 @@
       let lastCat1 = "공통";
       let lastCat2 = "가설 공사";
 
-      // 공정 데이터 행 순회 (row index 6부터)
       for (let r = 6; r < rows.length; r++) {
         const row = rows[r];
         if (!row || row.length < 5) continue;
@@ -553,7 +833,6 @@
 
         if (!task) continue;
 
-        // 해당 행의 날짜별 셀 값 확인
         for (const colIdx in dateMap) {
           const val = row[colIdx] ? String(row[colIdx]).trim() : '';
           if (val && val !== ',' && val !== '-') {
@@ -574,7 +853,6 @@
       }
     }
 
-    // 구글 시트 실시간 Fetch 및 상태 업데이트
     async function fetchSheetData() {
       const refreshIcon = document.getElementById('refreshIcon');
       const syncStatus = document.getElementById('syncStatus');
@@ -585,7 +863,6 @@
       syncText.innerText = "구글 시트 동기화 중...";
 
       try {
-        // 캐시 방지를 위한 타임스탬프 쿼리
         const response = await fetch(`${GOOGLE_SHEET_CSV_URL}&_t=${Date.now()}`);
         if (!response.ok) throw new Error("네트워크 응답 오류");
         
@@ -596,12 +873,12 @@
         const timeStr = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
         
         syncText.innerText = `구글시트 동기화됨 (${timeStr})`;
-        syncStatus.className = "hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200";
+        syncStatus.className = "hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200";
         syncDetailText.innerText = `구글 시트와 실시간 연동 중입니다. (최종 갱신: ${timeStr} / 총 ${currentEvents.length}개 공정 감지)`;
       } catch (err) {
         console.warn("구글 시트 실시간 연동 폴백 처리:", err);
         syncText.innerText = "로컬 기본 데이터 모드";
-        syncStatus.className = "hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200";
+        syncStatus.className = "hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200";
         syncDetailText.innerText = "구글 시트 응답 지연으로 안전 기본 데이터셋(73개 항목)이 로드되었습니다.";
       } finally {
         refreshIcon.classList.remove('fa-spin');
@@ -611,7 +888,6 @@
       }
     }
 
-    // 간트 타임라인 렌더링
     function renderSchedule() {
       const container = document.getElementById('scheduleContainer');
       container.innerHTML = '';
@@ -657,7 +933,7 @@
           
           <div class="col-span-9 relative h-8 bg-slate-50/70 rounded-xl border border-slate-100 overflow-hidden flex items-center px-1">
             <!-- 9월 5일(현재) 기준선 -->
-            <div class="absolute top-0 bottom-0 w-[1.5px] bg-red-500 z-10 opacity-70" style="left: ${getDatePercent('2026-09-05')}%;" title="금일 기준선 (2026.09.05)"></div>
+            <div class="absolute top-0 bottom-0 w-[1.5px] bg-red-500 z-10 opacity-70" style="left: ${getDatePercent(TODAY_STR)}%;" title="금일 기준선 (2026.09.05)"></div>
             
             <!-- 공정 타임라인 바 -->
             <div class="gantt-bar absolute h-5 rounded-lg bg-gradient-to-r ${colors.bar} text-white shadow-sm flex items-center px-2 text-[10px] font-semibold cursor-pointer truncate"
@@ -671,7 +947,6 @@
       });
     }
 
-    // 캘린더 월별 뷰 렌더링
     function renderCalendar() {
       const container = document.getElementById('calendarViewContainer');
       const year = 2026;
@@ -693,23 +968,22 @@
         <div class="grid grid-cols-7 divide-x divide-y divide-slate-200 bg-white">
       `;
 
-      // 이전 달 여백
       for (let i = 0; i < firstDay; i++) {
         html += `<div class="min-h-[100px] bg-slate-50/40 p-1.5"></div>`;
       }
 
-      // 날짜별 셀 생성
       for (let day = 1; day <= lastDate; day++) {
         const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
         const dayEvents = currentEvents.filter(e => e.date === dateStr);
-        const isToday = (dateStr === '2026-09-05');
+        const isToday = (dateStr === TODAY_STR);
+        const isTomorrow = (dateStr === TOMORROW_STR);
         const isOutRange = (month === 8 && day < 6) || (month === 10 && day > 26);
 
         html += `
-          <div class="min-h-[110px] p-1.5 transition ${isToday ? 'bg-indigo-50/70 ring-2 ring-indigo-500 z-10' : (isOutRange ? 'bg-slate-50 opacity-40' : 'hover:bg-slate-50/80')}">
+          <div class="min-h-[110px] p-1.5 transition ${isToday ? 'bg-indigo-50/70 ring-2 ring-indigo-500 z-10' : (isTomorrow ? 'bg-amber-50/40' : (isOutRange ? 'bg-slate-50 opacity-40' : 'hover:bg-slate-50/80'))}">
             <div class="flex items-center justify-between">
               <span class="text-xs font-bold ${isToday ? 'text-indigo-600 font-extrabold px-1.5 py-0.5 rounded-full bg-indigo-100' : 'text-slate-700'}">${day}</span>
-              ${isToday ? '<span class="text-[9px] font-bold text-rose-500 bg-rose-50 px-1 rounded">오늘</span>' : ''}
+              ${isToday ? '<span class="text-[9px] font-bold text-rose-500 bg-rose-50 px-1 rounded">오늘</span>' : (isTomorrow ? '<span class="text-[9px] font-bold text-amber-600 bg-amber-50 px-1 rounded">내일</span>' : '')}
             </div>
             
             <div class="mt-1 space-y-1">
@@ -765,8 +1039,9 @@
       renderSchedule();
     }
 
-    // 앱 시작 시 데이터 불러오기
     window.addEventListener('DOMContentLoaded', () => {
+      loadTodayWeather();
+      updatePeriodKPI();
       fetchSheetData();
     });
   </script>
