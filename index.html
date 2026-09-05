@@ -85,8 +85,13 @@
       transition: transform 0.2s ease, box-shadow 0.2s ease;
     }
     .gantt-bar:hover {
-      transform: scaleY(1.18);
-      z-index: 20;
+      transform: scale(1.12);
+      z-index: 30;
+    }
+
+    /* 분할 공정 가이드 점선 트랙 */
+    .gantt-track-line {
+      background-image: repeating-linear-gradient(to right, #cbd5e1 0, #cbd5e1 6px, transparent 6px, transparent 12px);
     }
   </style>
 </head>
@@ -1263,6 +1268,49 @@
         return;
       }
 
+      // 연속된 일자들을 묶어주는 세그먼트 생성 헬퍼 (하루 간격 초과 시 분할 세그먼트 처리)
+      function clusterConsecutiveEvents(events) {
+        const sorted = [...events].sort((a,b) => new Date(a.date) - new Date(b.date));
+        const clusters = [];
+        let currentCluster = null;
+
+        sorted.forEach(ev => {
+          const evTime = new Date(ev.date).getTime();
+          const oneDay = 1000 * 60 * 60 * 24;
+
+          if (!currentCluster) {
+            currentCluster = {
+              startDate: ev.date,
+              endDate: ev.date,
+              events: [ev]
+            };
+          } else {
+            const lastTime = new Date(currentCluster.endDate).getTime();
+            const diffDays = Math.round((evTime - lastTime) / oneDay);
+
+            // 바로 다음 날(연속 작업)인 경우 한 블록으로 합침
+            if (diffDays <= 1) {
+              currentCluster.endDate = ev.date;
+              currentCluster.events.push(ev);
+            } else {
+              // 날짜 공백(Gap)이 있는 경우 별도의 분할 세그먼트로 분리
+              clusters.push(currentCluster);
+              currentCluster = {
+                startDate: ev.date,
+                endDate: ev.date,
+                events: [ev]
+              };
+            }
+          }
+        });
+
+        if (currentCluster) {
+          clusters.push(currentCluster);
+        }
+
+        return clusters;
+      }
+
       groupKeys.forEach(key => {
         const group = taskGroups[key];
         const colors = getCatColor(group.cat1);
@@ -1270,32 +1318,69 @@
         const firstDate = sortedEvents[0].date;
         const lastDate = sortedEvents[sortedEvents.length - 1].date;
 
-        const leftPct = getDatePercent(firstDate);
-        const rightPct = getDatePercent(lastDate);
-        const widthPct = Math.max(3.2, rightPct - leftPct + 2.5);
+        // 연속 작업 블록들로 분할 클러스터링
+        const segments = clusterConsecutiveEvents(sortedEvents);
+        const isDiscrete = segments.length > 1;
+
+        // 전체 범위 좌우 퍼센트 (배경 연결선용)
+        const overallLeftPct = getDatePercent(firstDate);
+        const overallRightPct = getDatePercent(lastDate);
+        const overallWidthPct = Math.max(1.5, overallRightPct - overallLeftPct);
 
         const row = document.createElement('div');
-        row.className = 'grid grid-cols-12 items-center hover:bg-slate-50/80 transition py-2 px-2';
+        row.className = 'grid grid-cols-12 items-center hover:bg-slate-50/80 transition py-2.5 px-2 border-b border-slate-100 last:border-b-0';
         
+        // 분할 작업 안내 뱃지
+        const splitBadge = isDiscrete 
+          ? `<span class="text-[9px] font-bold px-1.5 py-0.2 rounded bg-amber-50 text-amber-700 border border-amber-200" title="${segments.length}회 분할 작업">총 ${segments.length}회 분할</span>`
+          : '';
+
         row.innerHTML = `
           <div class="col-span-3 pr-2 flex flex-col justify-center">
-            <div class="flex items-center gap-1.5 mb-0.5">
+            <div class="flex items-center gap-1.5 mb-0.5 flex-wrap">
               <span class="text-[10px] font-bold px-1.5 py-0.5 rounded ${colors.badge}">${group.cat2 || '공통'}</span>
-              <span class="text-[10px] text-slate-400">${firstDate.slice(5)} ~ ${lastDate.slice(5)}</span>
+              <span class="text-[10px] text-slate-400 font-medium">${firstDate.slice(5)} ~ ${lastDate.slice(5)}</span>
+              ${splitBadge}
             </div>
             <div class="font-bold text-slate-900 truncate" title="${group.task}">${group.task}</div>
           </div>
           
-          <div class="col-span-9 relative h-8 bg-slate-50/70 rounded-xl border border-slate-100 overflow-hidden flex items-center px-1">
+          <div class="col-span-9 relative h-9 bg-slate-50/70 rounded-xl border border-slate-100 overflow-hidden flex items-center px-1">
             <!-- 9월 5일(현재) 기준선 -->
-            <div class="absolute top-0 bottom-0 w-[1.5px] bg-red-500 z-10 opacity-70" style="left: ${getDatePercent(TODAY_STR)}%;" title="금일 기준선 (2026.09.05)"></div>
+            <div class="absolute top-0 bottom-0 w-[1.5px] bg-rose-500 z-20 opacity-80 pointer-events-none" style="left: ${getDatePercent(TODAY_STR)}%;" title="금일 기준선 (2026.09.05)"></div>
             
-            <!-- 공정 타임라인 바 -->
-            <div class="gantt-bar absolute h-5 rounded-lg bg-gradient-to-r ${colors.bar} text-white shadow-sm flex items-center px-2 text-[10px] font-semibold cursor-pointer truncate"
-                 style="left: ${leftPct}%; width: ${widthPct}%;"
-                 title="${group.cat1} > ${group.cat2} > ${group.task} (${sortedEvents.map(e => e.date + ': ' + e.val).join(' | ')})">
-              ${sortedEvents.length === 1 ? sortedEvents[0].val : `${sortedEvents[0].val} 외 ${sortedEvents.length-1}건`}
-            </div>
+            <!-- 분할 작업 연결선: 분할 공정일 때만 첫 작업일과 마지막 작업일 사이에 점선 트랙 표시 -->
+            ${isDiscrete ? `
+              <div class="gantt-track-line absolute h-[2px] z-0 opacity-70"
+                   style="left: ${overallLeftPct + 1}%; width: ${Math.max(2, overallWidthPct)}%;"
+                   title="${group.task}: ${segments.length}회에 걸쳐 분할 시공 (공백기 포함)">
+              </div>
+            ` : ''}
+
+            <!-- 실제 작업일 세그먼트들 (공백 구간은 비워두고 실제 작업일만 렌더링) -->
+            ${segments.map((seg, idx) => {
+              const segLeft = getDatePercent(seg.startDate);
+              const segRight = getDatePercent(seg.endDate);
+              // 단일 일자 작업일 경우 최소 폭 보장
+              const isSingleDay = (seg.startDate === seg.endDate);
+              const segWidth = isSingleDay ? 2.8 : Math.max(3.2, segRight - segLeft + 2.5);
+
+              // 텍스트 라벨 (공간에 맞게 간결화)
+              const firstVal = seg.events[0].val;
+              const displayText = isSingleDay 
+                ? (firstVal.length > 7 ? firstVal.slice(0, 7) + '..' : firstVal)
+                : `${firstVal} (${seg.startDate.slice(5)}~${seg.endDate.slice(5)})`;
+
+              const tooltipText = `[${group.task} - ${idx + 1}차 작업]\n기간: ${seg.startDate} ~ ${seg.endDate}\n내용: ${seg.events.map(e => e.date.slice(5) + ' ' + e.val).join(', ')}`;
+
+              return `
+                <div class="gantt-bar absolute h-6 rounded-lg bg-gradient-to-r ${colors.bar} text-white shadow-sm flex items-center px-1.5 text-[10px] font-semibold cursor-pointer truncate z-10 hover:ring-2 hover:ring-indigo-400 hover:ring-offset-1"
+                     style="left: ${segLeft}%; width: ${segWidth}%;"
+                     title="${tooltipText}">
+                  <span class="truncate">${displayText}</span>
+                </div>
+              `;
+            }).join('')}
           </div>
         `;
         container.appendChild(row);
