@@ -94,7 +94,7 @@
 
   <!-- 상단 네비게이션 헤더 -->
   <header class="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-sm">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex flex-wrap items-center justify-between gap-3">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex flex-wrap items-center justify-between gap-3">
       <div class="flex items-center space-x-3 sm:space-x-4">
         <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center text-white text-xl sm:text-2xl shadow-lg shadow-indigo-200">
           <i class="fa-solid fa-building-circle-check"></i>
@@ -108,10 +108,43 @@
         </div>
       </div>
 
-      <!-- 우측 컨트롤: 오늘 날짜 & 날씨 위젯 + 동기화 + 인쇄 -->
-      <div class="flex items-center flex-wrap gap-2.5 sm:gap-3">
-        <!-- 1. 오늘 날짜 및 현장 날씨 위젯 -->
-        <div class="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-100/90 border border-slate-200 text-xs text-slate-700 shadow-inner">
+      <!-- 상단 핵심 현황: 1. 준공마감일 & 현재공정률 + 2. 공기 신호등 위젯 -->
+      <div class="flex items-center flex-wrap gap-2 sm:gap-3">
+        
+        <!-- [신규] 준공마감일 및 D-Day 강조 박스 -->
+        <div class="flex items-center gap-2.5 px-3 py-1.5 rounded-2xl bg-slate-900 text-white shadow-md border border-slate-700">
+          <div class="w-8 h-8 rounded-xl bg-indigo-500/30 border border-indigo-400/40 flex items-center justify-center text-indigo-300">
+            <i class="fa-solid fa-flag-checkered text-xs"></i>
+          </div>
+          <div class="text-left">
+            <div class="text-[10px] text-slate-300 font-semibold flex items-center gap-1">
+              준공 마감일
+              <span id="topDdayBadge" class="px-1.5 py-0.2 rounded bg-rose-500 text-white font-extrabold text-[10px]">D-51</span>
+            </div>
+            <div class="text-xs sm:text-sm font-black tracking-tight text-white">2026.10.26</div>
+          </div>
+        </div>
+
+        <!-- [신규] 현재 공정률 및 신호등 상태 뱃지 (공기준수/지연/단축) -->
+        <div class="flex items-center gap-2.5 px-3.5 py-1.5 rounded-2xl bg-indigo-50/80 border border-indigo-200/90 shadow-sm">
+          <div class="text-left">
+            <div class="text-[10px] text-indigo-700 font-bold uppercase tracking-wider flex items-center gap-1">
+              <i class="fa-solid fa-chart-line text-[10px]"></i> 실 기성 공정률
+            </div>
+            <div class="text-base sm:text-lg font-black text-indigo-900 leading-tight">
+              <span id="topProgressRate">18.4%</span>
+            </div>
+          </div>
+
+          <!-- 신호등 뱃지: 공기단축(초록) / 공기준수(파랑) / 공기지연(빨강) -->
+          <div id="trafficLightBadge" class="flex items-center gap-1.5 px-2.5 py-1 rounded-xl font-black text-xs shadow-sm bg-blue-100 text-blue-800 border border-blue-300">
+            <span id="trafficLightDot" class="w-2.5 h-2.5 rounded-full bg-blue-600 animate-pulse"></span>
+            <span id="trafficLightText">공기준수</span>
+          </div>
+        </div>
+
+        <!-- 오늘 날짜 및 현장 날씨 위젯 -->
+        <div class="hidden xl:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-100/90 border border-slate-200 text-xs text-slate-700 shadow-inner">
           <div class="flex items-center gap-1.5 font-bold text-slate-800">
             <i class="fa-regular fa-calendar text-indigo-600"></i>
             <span id="headerTodayDate">2026년 9월 5일 (토)</span>
@@ -123,20 +156,20 @@
           </div>
         </div>
 
-        <!-- 구글 시트 동기화 상태 태그 -->
-        <div id="syncStatus" class="hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+        <!-- [복원] 구글 시트 실시간 상태 뱃지 -->
+        <div id="syncStatus" class="hidden lg:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-sm">
           <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-          <span id="syncText">구글시트 연동완료</span>
+          <span id="syncText">시트 연동완료</span>
         </div>
 
         <!-- 동기화 새로고침 버튼 -->
-        <button onclick="fetchSheetData()" id="refreshBtn" class="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 text-xs sm:text-sm font-semibold flex items-center gap-1.5 shadow-sm transition active:scale-95" title="구글 시트 최신 일정 다시 동기화">
+        <button onclick="fetchSheetData()" id="refreshBtn" class="px-2.5 sm:px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 text-xs sm:text-sm font-semibold flex items-center gap-1.5 shadow-sm transition active:scale-95" title="구글 시트 최신 일정 다시 동기화">
           <i id="refreshIcon" class="fa-solid fa-rotate"></i>
           <span class="hidden sm:inline">최신 동기화</span>
         </button>
 
         <!-- 인쇄 / PDF 출력 버튼 -->
-        <button onclick="window.print()" class="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs sm:text-sm font-semibold flex items-center gap-2 shadow-sm transition active:scale-95">
+        <button onclick="window.print()" class="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs sm:text-sm font-semibold flex items-center gap-2 shadow-sm transition active:scale-95">
           <i class="fa-solid fa-print"></i>
           <span class="hidden sm:inline">인쇄 / PDF</span>
         </button>
@@ -146,31 +179,55 @@
 
   <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
 
-    <!-- KPI 요약 지표 (요구사항 2, 3, 4 반영) -->
+    <!-- KPI 요약 지표 (요구사항 2: 경과기간 vs 공정률 비교 & 공기 신호등 세부 카드) -->
     <section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
       
-      <!-- 2. 공사 기간 경과 및 잔여일 표시 카드 -->
+      <!-- 2. 공사 기간 경과 및 잔여일 표시 카드 (신호등 상세 게이지 포함) -->
       <div class="card-3d bg-white p-5 rounded-2xl border border-slate-100 relative overflow-hidden flex flex-col justify-between">
         <div class="absolute -right-3 -bottom-3 text-indigo-50 text-7xl font-black pointer-events-none">82</div>
         <div>
           <div class="flex items-center justify-between mb-2">
             <span class="text-indigo-600 font-bold text-xs uppercase tracking-wider flex items-center gap-1.5">
-              <i class="fa-solid fa-hourglass-half"></i> 공사 기간 진행 현황
+              <i class="fa-solid fa-hourglass-half"></i> 공사 일정 진도 분석
             </span>
-            <span class="text-[11px] font-extrabold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-md" id="kpiElapsedBadge">31일 경과</span>
+            <button onclick="openWeightModal()" class="text-[10px] font-bold text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100 px-2 py-0.5 rounded-md transition flex items-center gap-1" title="공종별 가중치 및 기성고 산정 기준 확인">
+              <i class="fa-solid fa-calculator text-[9px]"></i> 가중치 분석
+            </button>
           </div>
-          <div class="text-2xl sm:text-3xl font-black text-slate-900 flex items-baseline gap-2">
+          <div class="text-2xl sm:text-3xl font-black text-slate-900 flex items-baseline justify-between">
             <span id="kpiRemainingDays">D-51</span>
-            <span class="text-xs text-slate-500 font-semibold">(총 82일 중)</span>
+            <span id="kpiTrafficLightMini" class="text-xs font-black px-2.5 py-1 rounded-lg bg-blue-100 text-blue-700 border border-blue-300 flex items-center gap-1">
+              <span class="w-2 h-2 rounded-full bg-blue-600"></span> 공기준수 (0.0%)
+            </span>
           </div>
-          <!-- 프로그레스 바 -->
-          <div class="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden mt-3 ring-1 ring-slate-200/70">
-            <div id="kpiProgressBar" class="bg-gradient-to-r from-indigo-500 to-violet-600 h-full rounded-full transition-all duration-700" style="width: 37.8%;"></div>
+
+          <!-- 듀얼 프로그레스 바 (계획 진도율 vs 가중치 실 기성 공정률 비교) -->
+          <div class="space-y-1.5 mt-3">
+            <div>
+              <div class="flex justify-between text-[11px] text-slate-500 font-medium">
+                <span>계획 진도율 (가중치 기준)</span>
+                <span class="font-bold text-slate-700" id="labelPlanProgress">18.4%</span>
+              </div>
+              <div class="w-full bg-slate-100 h-2 rounded-full overflow-hidden ring-1 ring-slate-200/60">
+                <div id="barPlanProgress" class="bg-slate-400 h-full rounded-full transition-all duration-700" style="width: 18.4%;"></div>
+              </div>
+            </div>
+
+            <div>
+              <div class="flex justify-between text-[11px] text-indigo-600 font-semibold">
+                <span>실제 기성 공정률 (가중치 100%)</span>
+                <span class="font-extrabold text-indigo-700" id="labelActualProgress">18.4%</span>
+              </div>
+              <div class="w-full bg-indigo-50 h-2.5 rounded-full overflow-hidden ring-1 ring-indigo-200">
+                <div id="kpiProgressBar" class="bg-gradient-to-r from-indigo-500 to-violet-600 h-full rounded-full transition-all duration-700" style="width: 18.4%;"></div>
+              </div>
+            </div>
           </div>
         </div>
-        <div class="text-xs text-slate-500 mt-3 font-medium flex justify-between">
-          <span>시작: 08.06</span>
-          <span class="font-bold text-indigo-600">진행률 37.8%</span>
+
+        <div class="text-[11px] text-slate-500 mt-3 pt-2 border-t border-slate-100 flex justify-between font-medium">
+          <span id="kpiElapsedDaysText">31일 경과 (37.8%)</span>
+          <span class="font-bold text-slate-700" id="progressDiffDetail">공정차: ±0.0% (정상)</span>
           <span>준공: 10.26</span>
         </div>
       </div>
@@ -306,34 +363,46 @@
           </div>
         </div>
 
-        <!-- 2단계 -->
+        <!-- 2단계: 1차 천정배관 및 기초설비 (8월 기완료분) -->
         <div class="card-3d bg-slate-50 hover:bg-slate-100/80 p-4 rounded-2xl border-t-4 border-emerald-500 flex flex-col justify-between">
           <div>
-            <span class="text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">STEP 02</span>
-            <h3 class="font-bold text-slate-900 text-base mt-2">설비 기초 배관</h3>
-            <p class="text-xs text-slate-500 font-medium mt-1">8/18 ~ 8/31</p>
+            <div class="flex items-center justify-between">
+              <span class="text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">STEP 02</span>
+              <span class="text-[10px] font-semibold text-emerald-600 bg-emerald-100/60 px-1.5 py-0.5 rounded">1차 공정</span>
+            </div>
+            <h3 class="font-bold text-slate-900 text-base mt-2">1차 천정배관·기초설비</h3>
+            <p class="text-xs text-slate-500 font-medium mt-1">8/18 ~ 8/31 (8월 완료)</p>
             <ul class="text-xs text-slate-600 space-y-1 mt-3">
-              <li>• 바닥 모서리 테두리 방수</li>
-              <li>• 천정 전열/통신/조명 배관</li>
-              <li>• 주방/욕실 덕트 &amp; 에어컨</li>
+              <li>• 바닥 모서리 테두리 1차 방수</li>
+              <li>• <b>천정 전열/통신/조명 1차 배관</b></li>
+              <li>• 주방/욕실 덕트 &amp; 에어컨 선배관</li>
             </ul>
+            <div class="mt-2.5 p-1.5 rounded-lg bg-emerald-50 border border-emerald-200/60 text-[10px] text-emerald-800 leading-tight">
+              <i class="fa-solid fa-circle-check text-emerald-600 mr-1"></i>천정 기초배관만 완료됨
+            </div>
           </div>
-          <span class="mt-4 text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded text-center">완료</span>
+          <span class="mt-3 text-[10px] font-bold text-emerald-700 bg-emerald-100/80 px-2 py-1 rounded text-center">1차 기초 배관 완료</span>
         </div>
 
-        <!-- 3단계 (차주 착수) -->
-        <div class="card-3d bg-slate-50 hover:bg-slate-100/80 p-4 rounded-2xl border-t-4 border-amber-500 flex flex-col justify-between">
+        <!-- 3단계: 차주 착수 - ALC벽체 및 본배관(급수·위생·난방) -->
+        <div class="card-3d bg-amber-50/70 hover:bg-amber-50 p-4 rounded-2xl border-t-4 border-amber-500 ring-2 ring-amber-400/40 flex flex-col justify-between">
           <div>
-            <span class="text-[11px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded">STEP 03</span>
-            <h3 class="font-bold text-slate-900 text-base mt-2">ALC벽체 &amp; 난방</h3>
-            <p class="text-xs text-amber-600 font-bold mt-1">9/07 ~ 9/16 (차주)</p>
-            <ul class="text-xs text-slate-600 space-y-1 mt-3">
-              <li>• ALC 자재양중 &amp; 벽체조성</li>
-              <li>• 급수/위생배관 &amp; 난방</li>
-              <li>• <b>9/16 바닥 몰탈타설</b></li>
+            <div class="flex items-center justify-between">
+              <span class="text-[11px] font-extrabold text-amber-800 bg-amber-200/80 px-2 py-0.5 rounded">STEP 03</span>
+              <span class="px-1.5 py-0.5 rounded bg-rose-500 text-white font-black text-[9px] animate-pulse">차주 본배관</span>
+            </div>
+            <h3 class="font-extrabold text-slate-900 text-base mt-2">ALC &amp; 본배관(급수·위생·난방)</h3>
+            <p class="text-xs text-amber-700 font-bold mt-1">9/07 ~ 9/16 (다음 주 착수)</p>
+            <ul class="text-xs text-slate-700 space-y-1 mt-3">
+              <li>• 9/07 ALC 양중 &amp; 단열뿜칠</li>
+              <li>• <b class="text-rose-600">9/10 급수/급탕 &amp; 오하수 위생배관</b></li>
+              <li>• <b class="text-rose-600">9/14 바닥 엑셀 난방배관</b></li>
+              <li>• <b>9/16 바닥 몰탈타설 (배관 매립)</b></li>
             </ul>
           </div>
-          <span class="mt-4 text-[10px] font-bold text-amber-700 bg-amber-100 px-2 py-1 rounded text-center">다음 착수 예정</span>
+          <div class="mt-3 text-[10px] font-extrabold text-amber-800 bg-amber-200/70 py-1 rounded text-center border border-amber-300">
+            차주 핵심: 급수·위생·난방 착수
+          </div>
         </div>
 
         <!-- 4단계 -->
@@ -508,6 +577,51 @@
     </div>
   </div>
 
+  <!-- [신규] 7대 공종별 가중치 기성고 산정 상세 모달 -->
+  <div id="weightBreakdownModal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl max-w-2xl w-full max-h-[85vh] shadow-2xl flex flex-col overflow-hidden border border-slate-200 animate-in fade-in zoom-in duration-200">
+      <div class="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/60">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-2xl bg-indigo-100 text-indigo-700 flex items-center justify-center text-lg shadow-sm">
+            <i class="fa-solid fa-scale-balanced"></i>
+          </div>
+          <div>
+            <h3 class="text-lg font-bold text-slate-900">7대 공종별 공사 가중치 &amp; 실 기성고 분석</h3>
+            <p class="text-xs text-slate-500">인테리어 공사비·품셈 기준 가중치 100% 누계 산출</p>
+          </div>
+        </div>
+        <button onclick="closeWeightModal()" class="w-8 h-8 rounded-full bg-slate-200/70 hover:bg-slate-300 text-slate-600 flex items-center justify-center transition">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="p-6 overflow-y-auto space-y-4">
+        <!-- 상단 요약 안내문 -->
+        <div class="p-3.5 bg-indigo-50/70 border border-indigo-100 rounded-2xl text-xs text-indigo-950 flex items-start gap-3">
+          <i class="fa-solid fa-circle-info text-indigo-600 mt-0.5 text-sm"></i>
+          <div>
+            <span class="font-bold">가중치 산정 방식 (Earned Value):</span>
+            <p class="text-indigo-800 mt-0.5 leading-relaxed">
+              단순 일수나 건수(1/73)가 아닌, 공사비 규모가 큰 <b>ALC 골조(16%), 본배관/몰탈(18%), 마감재(15%)</b>에 높은 가중치를 배정하여 현장의 실제 시공 진도와 100% 일치하도록 기성고를 산정합니다.
+            </p>
+          </div>
+        </div>
+
+        <!-- 7대 공종 리스트 컨테이너 -->
+        <div id="weightListContainer" class="space-y-3">
+          <!-- 자바스크립트로 동적 렌더링 -->
+        </div>
+      </div>
+
+      <div class="p-4 border-t border-slate-100 bg-slate-50 flex items-center justify-between">
+        <span class="text-xs font-bold text-slate-600">누계 실 기성 공정률 합계: <span id="modalTotalActual" class="text-indigo-600 font-extrabold text-sm">18.4%</span></span>
+        <button onclick="closeWeightModal()" class="px-5 py-2 rounded-xl bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold shadow transition">
+          닫기
+        </button>
+      </div>
+    </div>
+  </div>
+
   <footer class="bg-white border-t border-slate-200 py-6 mt-12 text-center text-xs text-slate-400">
     <p>무학동 고시원 공사예정표 (WORK SCHEDULE) • 원본작성일: 2026년 09월 04일 • 현장책임자: 김동현</p>
   </footer>
@@ -605,33 +719,123 @@
     const baseEnd = new Date('2026-10-26').getTime();
     const totalDuration = baseEnd - baseStart;
 
-    // 1. 서울 중구 무학동 날씨 가져오기 (Open-Meteo API: 무학동 좌표 위도 37.564, 경도 127.022)
+    // [신규] 7대 공종별 건설 표준 공사비/품셈 가중치(Weight) 정의 (합계: 100%)
+    const WORK_PACKAGES = [
+      {
+        id: 'prep_demo',
+        name: '1. 가설 및 철거공사',
+        weight: 8.0,
+        badgeColor: 'bg-rose-50 text-rose-700 border-rose-200',
+        barColor: 'bg-rose-500',
+        matcher: e => (e.cat2 && e.cat2.includes('철거')) || (e.cat2 && e.cat2.includes('가설')) || (e.task && e.task.includes('먹메김')) || (e.task && e.task.includes('폐기물'))
+      },
+      {
+        id: 'alc_frame',
+        name: '2. ALC 벽체 및 차음공사',
+        weight: 16.0,
+        badgeColor: 'bg-amber-50 text-amber-700 border-amber-200',
+        barColor: 'bg-amber-500',
+        matcher: e => (e.cat2 && e.cat2.includes('ALC')) || (e.task && e.task.includes('흡음재'))
+      },
+      {
+        id: 'mep_plumb',
+        name: '3. 기계설비·위생·난방·몰탈',
+        weight: 18.0,
+        badgeColor: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+        barColor: 'bg-emerald-500',
+        matcher: e => (e.cat1 && e.cat1.includes('기계')) || (e.cat2 && e.cat2.includes('습식')) || (e.task && e.task.includes('급수')) || (e.task && e.task.includes('위생')) || (e.task && e.task.includes('난방')) || (e.task && e.task.includes('몰탈')) || (e.task && e.task.includes('보일러')) || (e.task && e.task.includes('에어컨')) || (e.task && e.task.includes('가스')) || (e.task && e.task.includes('덕트'))
+      },
+      {
+        id: 'electric_fire',
+        name: '4. 전기·통신·소방설비',
+        weight: 14.0,
+        badgeColor: 'bg-blue-50 text-blue-700 border-blue-200',
+        barColor: 'bg-blue-500',
+        matcher: e => (e.cat1 && e.cat1.includes('전기')) || (e.task && e.task.includes('통신')) || (e.task && e.task.includes('소방')) || (e.task && e.task.includes('조명')) || (e.task && e.task.includes('전열')) || (e.task && e.task.includes('CCTV')) || (e.task && e.task.includes('인터넷')) || (e.task && e.task.includes('안전점검'))
+      },
+      {
+        id: 'wood_waterproof',
+        name: '5. 방수·단열·목공·금속',
+        weight: 15.0,
+        badgeColor: 'bg-cyan-50 text-cyan-700 border-cyan-200',
+        barColor: 'bg-cyan-500',
+        matcher: e => (e.cat2 && e.cat2.includes('방수')) || (e.cat2 && e.cat2.includes('목')) || (e.cat2 && e.cat2.includes('금속')) || (e.cat2 && e.cat2.includes('단열')) || (e.task && e.task.includes('완강기')) || (e.task && e.task.includes('욕실돔')) || (e.task && e.task.includes('단열뿜칠'))
+      },
+      {
+        id: 'finish_surface',
+        name: '6. 타일·도장·도배·필름',
+        weight: 15.0,
+        badgeColor: 'bg-teal-50 text-teal-700 border-teal-200',
+        barColor: 'bg-teal-500',
+        matcher: e => (e.cat2 && e.cat2.includes('타일')) || (e.cat2 && e.cat2.includes('도장')) || (e.cat2 && e.cat2.includes('필름')) || (e.cat2 && e.cat2.includes('도배')) || (e.task && e.task.includes('타일')) || (e.task && e.task.includes('퍼티')) || (e.task && e.task.includes('정배'))
+      },
+      {
+        id: 'interior_fixture',
+        name: '7. 바닥재·가구·가전·준공',
+        weight: 14.0,
+        badgeColor: 'bg-purple-50 text-purple-700 border-purple-200',
+        barColor: 'bg-purple-500',
+        matcher: e => (e.cat2 && e.cat2.includes('가구')) || (e.cat2 && e.cat2.includes('바닥재')) || (e.cat2 && e.cat2.includes('가전')) || (e.cat2 && e.cat2.includes('간판')) || (e.cat2 && e.cat2.includes('창호')) || (e.task && e.task.includes('도어락')) || (e.task && e.task.includes('블라인드')) || (e.task && e.task.includes('준공청소'))
+      }
+    ];
+
+    let packageAnalytics = [];
+
+    // 서울 중구 무학동 실시간 기상 연동 (Open-Meteo 무료 API)
     async function loadTodayWeather() {
+      const weatherIcon = document.getElementById('weatherIcon');
+      const weatherText = document.getElementById('weatherText');
+      if (!weatherIcon || !weatherText) return;
+
       try {
-        const res = await fetch('https://api.open-meteo.com/v1/forecast?latitude=37.564&longitude=127.022&current_weather=true');
-        if (!res.ok) throw new Error("날씨 호출 오류");
+        // 서울 중구 무학동 좌표 (위도 37.5636, 경도 127.0164)
+        const res = await fetch('https://api.open-meteo.com/v1/forecast?latitude=37.5636&longitude=127.0164&current_weather=true');
+        if (!res.ok) throw new Error('기상 API 응답 오류');
         const data = await res.json();
-        const weather = data.current_weather;
-        const temp = Math.round(weather.temperature);
-        const code = weather.weathercode;
+        const cur = data.current_weather;
+        if (!cur) throw new Error('날씨 데이터 없음');
 
-        let icon = "fa-sun text-amber-500";
-        let desc = "맑음";
-        if (code >= 1 && code <= 3) { icon = "fa-cloud-sun text-amber-400"; desc = "구름조금"; }
-        else if (code >= 45 && code <= 48) { icon = "fa-smog text-slate-400"; desc = "안개"; }
-        else if (code >= 51 && code <= 67) { icon = "fa-cloud-rain text-blue-500"; desc = "비"; }
-        else if (code >= 71 && code <= 86) { icon = "fa-snowflake text-cyan-400"; desc = "눈"; }
-        else if (code >= 95) { icon = "fa-cloud-bolt text-purple-500"; desc = "뇌우"; }
+        const temp = Math.round(cur.temperature);
+        const code = cur.weathercode;
+        let desc = '맑음';
+        let iconClass = 'fa-solid fa-sun text-amber-500';
 
-        document.getElementById('weatherIcon').className = `fa-solid ${icon} text-sm`;
-        document.getElementById('weatherText').innerText = `서울 무학동 ${temp}°C ${desc}`;
+        if (code === 0) {
+          desc = '맑음';
+          iconClass = 'fa-solid fa-sun text-amber-500';
+        } else if (code >= 1 && code <= 3) {
+          desc = '구름조금';
+          iconClass = 'fa-solid fa-cloud-sun text-amber-400';
+        } else if (code >= 45 && code <= 48) {
+          desc = '안개';
+          iconClass = 'fa-solid fa-smog text-slate-400';
+        } else if (code >= 51 && code <= 67) {
+          desc = '비';
+          iconClass = 'fa-solid fa-cloud-rain text-blue-500';
+        } else if (code >= 71 && code <= 77) {
+          desc = '눈';
+          iconClass = 'fa-solid fa-snowflake text-sky-400';
+        } else if (code >= 80 && code <= 82) {
+          desc = '소나기';
+          iconClass = 'fa-solid fa-cloud-showers-heavy text-indigo-500';
+        } else if (code >= 95) {
+          desc = '뇌우';
+          iconClass = 'fa-solid fa-bolt text-amber-500';
+        } else {
+          desc = '구름많음';
+          iconClass = 'fa-solid fa-cloud text-slate-400';
+        }
+
+        weatherIcon.className = `${iconClass} text-sm animate-pulse`;
+        weatherText.innerText = `서울 무학동 ${temp}°C ${desc}`;
       } catch (err) {
-        console.warn("날씨 API 대체 기본값:", err);
-        document.getElementById('weatherText').innerText = `서울 무학동 24°C 맑음`;
+        console.warn('날씨 정보 로드 실패 (기본값 유지):', err);
+        weatherIcon.className = 'fa-solid fa-cloud-sun text-amber-500 text-sm animate-pulse';
+        weatherText.innerText = '서울 무학동 24°C 맑음';
       }
     }
 
-    // 2. 공사 기간 경과일 / 잔여일 계산
+    // 공사 기간 경과일 / 잔여일 계산 및 공기 신호등 판정 (공사 가중치 반영 업그레이드)
     function updatePeriodKPI() {
       const today = new Date(TODAY_STR).getTime();
       const start = baseStart;
@@ -641,11 +845,154 @@
       const totalDays = Math.round((end - start) / oneDay) + 1; // 82일
       const elapsedDays = Math.max(1, Math.min(totalDays, Math.round((today - start) / oneDay) + 1)); // 31일
       const remainingDays = totalDays - elapsedDays; // 51일
-      const progressPercent = ((elapsedDays / totalDays) * 100).toFixed(1);
+      const timePercent = parseFloat(((elapsedDays / totalDays) * 100).toFixed(1)); // 37.8%
 
-      document.getElementById('kpiElapsedBadge').innerText = `${elapsedDays}일 경과`;
-      document.getElementById('kpiRemainingDays').innerText = `D-${remainingDays}`;
-      document.getElementById('kpiProgressBar').style.width = `${progressPercent}%`;
+      // 7대 공종별 가중치(Weight) 기반 계획(PV) 및 실제(EV) 공정률 정밀 산정
+      let totalActualWeighted = 0;
+      let totalPlannedWeighted = 0;
+      packageAnalytics = [];
+
+      WORK_PACKAGES.forEach(pkg => {
+        // 해당 공종에 매핑되는 이벤트 목록
+        const matchedEvents = currentEvents.filter(e => pkg.matcher(e));
+        const count = matchedEvents.length || 1;
+
+        let completedWeightCount = 0;
+        let plannedWeightCount = 0;
+
+        matchedEvents.forEach(e => {
+          const s = getTaskStatus(e);
+          if (s === 'completed') {
+            completedWeightCount += 1.0;
+            plannedWeightCount += 1.0;
+          } else if (s === 'ongoing') {
+            completedWeightCount += 0.5; // 당일 진행중 가중치
+            plannedWeightCount += 1.0;   // 오늘 계획상 진행중
+          }
+        });
+
+        const actualProgressRate = (completedWeightCount / count) * 100;
+        const plannedProgressRate = (plannedWeightCount / count) * 100;
+
+        const actualContribution = (actualProgressRate / 100) * pkg.weight;
+        const plannedContribution = (plannedProgressRate / 100) * pkg.weight;
+
+        totalActualWeighted += actualContribution;
+        totalPlannedWeighted += plannedContribution;
+
+        packageAnalytics.push({
+          ...pkg,
+          eventCount: matchedEvents.length,
+          actualRate: parseFloat(actualProgressRate.toFixed(1)),
+          plannedRate: parseFloat(plannedProgressRate.toFixed(1)),
+          actualContribution: parseFloat(actualContribution.toFixed(2)),
+          plannedContribution: parseFloat(plannedContribution.toFixed(2))
+        });
+      });
+
+      const actualProgress = parseFloat(totalActualWeighted.toFixed(1));
+      const plannedProgress = parseFloat(totalPlannedWeighted.toFixed(1));
+
+      // 상단 헤더 및 카드 업데이트
+      const topDday = document.getElementById('topDdayBadge');
+      const topRate = document.getElementById('topProgressRate');
+      const kpiRemaining = document.getElementById('kpiRemainingDays');
+      const labelPlan = document.getElementById('labelPlanProgress');
+      const barPlan = document.getElementById('barPlanProgress');
+      const labelActual = document.getElementById('labelActualProgress');
+      const barActual = document.getElementById('kpiProgressBar');
+      const kpiElapsedText = document.getElementById('kpiElapsedDaysText');
+      const modalTotal = document.getElementById('modalTotalActual');
+
+      if (topDday) topDday.innerText = `D-${remainingDays}`;
+      if (topRate) topRate.innerText = `${actualProgress}%`;
+      if (kpiRemaining) kpiRemaining.innerText = `D-${remainingDays}`;
+      if (labelPlan) labelPlan.innerText = `${plannedProgress}%`;
+      if (barPlan) barPlan.style.width = `${plannedProgress}%`;
+      if (labelActual) labelActual.innerText = `${actualProgress}%`;
+      if (barActual) barActual.style.width = `${actualProgress}%`;
+      if (kpiElapsedText) kpiElapsedText.innerText = `${elapsedDays}일 경과 (${timePercent}%)`;
+      if (modalTotal) modalTotal.innerText = `${actualProgress}% (가중치 누계)`;
+
+      // 신호등 판정: 계획 진도율(PV) 대비 실제 기성 공정률(EV) 비교 (공학적 EVM)
+      const diff = parseFloat((actualProgress - plannedProgress).toFixed(1));
+      
+      const topBadge = document.getElementById('trafficLightBadge');
+      const topDot = document.getElementById('trafficLightDot');
+      const topText = document.getElementById('trafficLightText');
+      const miniBadge = document.getElementById('kpiTrafficLightMini');
+      const diffDetail = document.getElementById('progressDiffDetail');
+
+      if (!topBadge || !topDot || !topText || !miniBadge || !diffDetail) return;
+
+      if (diff > 1.5) {
+        // [초록색] 공기단축
+        topBadge.className = "flex items-center gap-1.5 px-2.5 py-1 rounded-xl font-black text-xs shadow-sm bg-emerald-100 text-emerald-800 border border-emerald-300";
+        topDot.className = "w-2.5 h-2.5 rounded-full bg-emerald-600 animate-pulse";
+        topText.innerText = `공기단축 (+${diff}%)`;
+
+        miniBadge.className = "text-xs font-black px-2.5 py-1 rounded-lg bg-emerald-100 text-emerald-700 border border-emerald-300 flex items-center gap-1";
+        miniBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-600"></span> 공기단축 (+${diff}%)`;
+        diffDetail.innerHTML = `<span class="text-emerald-600 font-bold">공정차: +${diff}% (예정보다 빠름)</span>`;
+      } else if (diff < -2.5) {
+        // [빨간색] 공기지연
+        topBadge.className = "flex items-center gap-1.5 px-2.5 py-1 rounded-xl font-black text-xs shadow-sm bg-rose-100 text-rose-800 border border-rose-300 animate-pulse";
+        topDot.className = "w-2.5 h-2.5 rounded-full bg-rose-600";
+        topText.innerText = `공기지연 (${diff}%)`;
+
+        miniBadge.className = "text-xs font-black px-2.5 py-1 rounded-lg bg-rose-100 text-rose-700 border border-rose-300 flex items-center gap-1";
+        miniBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-rose-600"></span> 공기지연 (${diff}%)`;
+        diffDetail.innerHTML = `<span class="text-rose-600 font-bold">공정차: ${diff}% (만회 대책 필요)</span>`;
+      } else {
+        // [파란색/정상] 공기준수
+        const signStr = diff >= 0 ? `+${diff}` : `${diff}`;
+        topBadge.className = "flex items-center gap-1.5 px-2.5 py-1 rounded-xl font-black text-xs shadow-sm bg-blue-100 text-blue-800 border border-blue-300";
+        topDot.className = "w-2.5 h-2.5 rounded-full bg-blue-600 animate-pulse";
+        topText.innerText = `공기준수 (${signStr}%)`;
+
+        miniBadge.className = "text-xs font-black px-2.5 py-1 rounded-lg bg-blue-100 text-blue-700 border border-blue-300 flex items-center gap-1";
+        miniBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-blue-600"></span> 공기준수 (${signStr}%)`;
+        diffDetail.innerHTML = `<span class="text-blue-600 font-bold">공정차: ${signStr}% (계획 일정 일치)</span>`;
+      }
+    }
+
+    // [신규] 공종별 가중치 모달 열기 및 렌더링
+    function openWeightModal() {
+      const container = document.getElementById('weightListContainer');
+      const modal = document.getElementById('weightBreakdownModal');
+      if (!container || !modal) return;
+
+      container.innerHTML = packageAnalytics.map(pkg => `
+        <div class="p-3.5 rounded-2xl border border-slate-200 bg-white hover:border-indigo-300 transition">
+          <div class="flex items-center justify-between mb-1.5">
+            <div class="flex items-center gap-2">
+              <span class="text-[11px] font-bold px-2 py-0.5 rounded border ${pkg.badgeColor}">가중치 ${pkg.weight}%</span>
+              <span class="text-xs font-bold text-slate-900">${pkg.name}</span>
+            </div>
+            <div class="text-right">
+              <span class="text-xs font-extrabold text-indigo-700">${pkg.actualRate}% 진행</span>
+              <span class="text-[10px] text-slate-400 block">(기여도 ${pkg.actualContribution}%)</span>
+            </div>
+          </div>
+          
+          <!-- 프로그레스 바 -->
+          <div class="w-full bg-slate-100 h-2 rounded-full overflow-hidden ring-1 ring-slate-200/50">
+            <div class="${pkg.barColor} h-full rounded-full transition-all duration-500" style="width: ${pkg.actualRate}%;"></div>
+          </div>
+          
+          <div class="flex justify-between items-center text-[10px] text-slate-400 mt-1.5">
+            <span>세부 이벤트: ${pkg.eventCount}건 매핑</span>
+            <span>계획 기여: ${pkg.plannedContribution}% / 실제: ${pkg.actualContribution}%</span>
+          </div>
+        </div>
+      `).join('');
+
+      modal.classList.remove('hidden');
+    }
+
+    function closeWeightModal() {
+      const modal = document.getElementById('weightBreakdownModal');
+      if (modal) modal.classList.add('hidden');
     }
 
     // 3. 완료 / 진행중 / 준비중 카운트 분류
@@ -859,8 +1206,8 @@
       const syncText = document.getElementById('syncText');
       const syncDetailText = document.getElementById('syncDetailText');
 
-      refreshIcon.classList.add('fa-spin');
-      syncText.innerText = "구글 시트 동기화 중...";
+      if (refreshIcon) refreshIcon.classList.add('fa-spin');
+      if (syncText) syncText.innerText = "구글 시트 동기화 중...";
 
       try {
         const response = await fetch(`${GOOGLE_SHEET_CSV_URL}&_t=${Date.now()}`);
@@ -872,16 +1219,24 @@
         const now = new Date();
         const timeStr = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
         
-        syncText.innerText = `구글시트 동기화됨 (${timeStr})`;
-        syncStatus.className = "hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200";
-        syncDetailText.innerText = `구글 시트와 실시간 연동 중입니다. (최종 갱신: ${timeStr} / 총 ${currentEvents.length}개 공정 감지)`;
+        if (syncText) syncText.innerText = `동기화됨 (${timeStr})`;
+        if (syncStatus) {
+          syncStatus.className = "hidden lg:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 shadow-sm";
+        }
+        if (syncDetailText) {
+          syncDetailText.innerText = `구글 시트와 실시간 연동 중입니다. (최종 갱신: ${timeStr} / 총 ${currentEvents.length}개 공정 감지)`;
+        }
       } catch (err) {
         console.warn("구글 시트 실시간 연동 폴백 처리:", err);
-        syncText.innerText = "로컬 기본 데이터 모드";
-        syncStatus.className = "hidden lg:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200";
-        syncDetailText.innerText = "구글 시트 응답 지연으로 안전 기본 데이터셋(73개 항목)이 로드되었습니다.";
+        if (syncText) syncText.innerText = "기본 데이터 모드";
+        if (syncStatus) {
+          syncStatus.className = "hidden lg:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200 shadow-sm";
+        }
+        if (syncDetailText) {
+          syncDetailText.innerText = "구글 시트 응답 대기 또는 로컬 안전 데이터셋(73개 항목)이 로드되었습니다.";
+        }
       } finally {
-        refreshIcon.classList.remove('fa-spin');
+        if (refreshIcon) refreshIcon.classList.remove('fa-spin');
         rebuildTaskGroups();
         renderSchedule();
         renderCalendar();
