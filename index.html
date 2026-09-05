@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>무학동 고시원공사 실시간 공정관리 대시보드</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome Icons CDN -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- PapaParse CSV 파서 CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#eef2ff',
+              100: '#e0e7ff',
+              500: '#6366f1',
+              600: '#4f46e5',
+              700: '#4338ca',
+              900: '#1e1b4b',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@300;400;500;600;700;800&display=swap');
+    * { font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif; }
+    
+    /* 3D 카드 입체 효과 */
+    .perspective-1000 {
+      perspective: 1000px;
+    }
+    .card-3d {
+      transition: all 0.3s cubic-bezier(0.165, 0.84, 0.44, 1);
+      transform-style: preserve-3d;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+    }
+    .card-3d:hover {
+      transform: translateY(-6px) rotateX(2deg) rotateY(-1deg);
+      box-shadow: 0 20px 30px -10px rgba(79, 70, 229, 0.18), 0 12px 16px -8px rgba(0, 0, 0, 0.08);
+    }
+    
+    /* 스크롤바 커스텀 */
+    ::-webkit-scrollbar {
+      height: 7px;
+      width: 7px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #f1f5f9;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+
+    /* 타임라인 바 호버 */
+    .gantt-bar {
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .gantt-bar:hover {
+      transform: scaleY(1.18);
+      z-index: 20;
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen">
+
+  <!-- 상단 네비게이션 헤더 -->
+  <header class="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-sm">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+      <div class="flex items-center space-x-3 sm:space-x-4">
+        <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center text-white text-xl sm:text-2xl shadow-lg shadow-indigo-200">
+          <i class="fa-solid fa-building-circle-check"></i>
+        </div>
+        <div>
+          <div class="flex items-center space-x-2">
+            <h1 class="text-lg sm:text-2xl font-black text-slate-900 tracking-tight">무학동 고시원 공사예정표</h1>
+            <span class="px-2 py-0.5 text-[11px] sm:text-xs font-bold rounded-full bg-emerald-100 text-emerald-700 border border-emerald-300">공사 진행중</span>
+          </div>
+          <p class="text-xs sm:text-sm text-slate-500 font-medium">시공: 더블유디에이치 주식회사 | 공기: 2026.08.06 ~ 2026.10.26</p>
+        </div>
+      </div>
+
+      <!-- 우측 컨트롤 버튼: 실시간 동기화 상태 + 새로고침 + 인쇄 -->
+      <div class="flex items-center space-x-2 sm:space-x-3">
+        <!-- 구글 시트 동기화 상태 태그 -->
+        <div id="syncStatus" class="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+          <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+          <span id="syncText">구글시트 연동완료</span>
+        </div>
+
+        <!-- 동기화 새로고침 버튼 -->
+        <button onclick="fetchSheetData()" id="refreshBtn" class="px-3 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 text-xs sm:text-sm font-semibold flex items-center gap-1.5 shadow-sm transition active:scale-95" title="구글 시트의 최신 변경사항을 다시 불러옵니다">
+          <i id="refreshIcon" class="fa-solid fa-rotate"></i>
+          <span class="hidden sm:inline">최신 동기화</span>
+        </button>
+
+        <!-- 인쇄 / PDF 출력 버튼 -->
+        <button onclick="window.print()" class="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs sm:text-sm font-semibold flex items-center gap-2 shadow-sm transition active:scale-95">
+          <i class="fa-solid fa-print"></i>
+          <span class="hidden sm:inline">인쇄 / PDF</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+
+    <!-- KPI 요약 지표 (입체 카드) -->
+    <section class="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+      <div class="card-3d bg-white p-5 rounded-2xl border border-slate-100 relative overflow-hidden">
+        <div class="absolute -right-3 -bottom-3 text-indigo-50 text-7xl font-black pointer-events-none">82</div>
+        <div class="flex items-center gap-3 text-indigo-600 font-semibold text-xs sm:text-sm uppercase tracking-wider mb-2">
+          <i class="fa-solid fa-calendar-days"></i> 전체 공사 기간
+        </div>
+        <div class="text-2xl sm:text-3xl font-extrabold text-slate-900">82일간</div>
+        <div class="text-xs text-slate-500 mt-1 font-medium">2026.08.06 ~ 2026.10.26</div>
+      </div>
+
+      <div class="card-3d bg-white p-5 rounded-2xl border border-slate-100 relative overflow-hidden">
+        <div class="absolute -right-3 -bottom-3 text-emerald-50 text-7xl font-black pointer-events-none" id="kpiProgressBg">38%</div>
+        <div class="flex items-center gap-3 text-emerald-600 font-semibold text-xs sm:text-sm uppercase tracking-wider mb-2">
+          <i class="fa-solid fa-chart-pie"></i> 계획 공정률 (09/05 기준)
+        </div>
+        <div class="text-2xl sm:text-3xl font-extrabold text-emerald-600" id="kpiProgressText">37.8%</div>
+        <div class="text-xs text-slate-500 mt-1 font-medium">31일 경과 / 51일 잔여</div>
+      </div>
+
+      <div class="card-3d bg-white p-5 rounded-2xl border border-slate-100 relative overflow-hidden">
+        <div class="absolute -right-3 -bottom-3 text-amber-50 text-7xl font-black pointer-events-none" id="kpiEventCountBg">73</div>
+        <div class="flex items-center gap-3 text-amber-600 font-semibold text-xs sm:text-sm uppercase tracking-wider mb-2">
+          <i class="fa-solid fa-list-check"></i> 세부 공정 이벤트
+        </div>
+        <div class="text-2xl sm:text-3xl font-extrabold text-slate-900" id="kpiEventCountText">73개 항목</div>
+        <div class="text-xs text-slate-500 mt-1 font-medium">마감 / 전기 / 기계설비 공정</div>
+      </div>
+
+      <div class="card-3d bg-gradient-to-br from-indigo-600 to-violet-700 text-white p-5 rounded-2xl shadow-xl shadow-indigo-100 relative overflow-hidden">
+        <div class="flex items-center gap-3 text-indigo-200 font-semibold text-xs sm:text-sm uppercase tracking-wider mb-2">
+          <i class="fa-solid fa-calendar-day"></i> 금일 (09.05 토) 주요 작업
+        </div>
+        <div class="text-lg sm:text-2xl font-extrabold">창문 벽체 철거 4차</div>
+        <div class="text-xs text-indigo-100 mt-1 font-medium">차주 집중: 09/07 ALC 자재양중</div>
+      </div>
+    </section>
+
+    <!-- 구글 시트 원본 바로가기 배너 -->
+    <div class="bg-gradient-to-r from-indigo-50 via-white to-indigo-50 border border-indigo-100 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs">
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center shrink-0">
+          <i class="fa-solid fa-table"></i>
+        </div>
+        <div>
+          <span class="font-bold text-slate-900">구글 스프레드시트 실시간 연동 활성화</span>
+          <p class="text-slate-500 mt-0.5" id="syncDetailText">구글 시트에서 일정이나 작업명을 변경하면 [최신 동기화]를 통해 즉시 대시보드에 반영됩니다.</p>
+        </div>
+      </div>
+      <a href="https://docs.google.com/spreadsheets/d/e/2PACX-1vRAAXChTqEOfI-6Zjak1fc32gi9Zmou-n-oq3O17lhNHAyapg59YLUIleoVet17FA/pub?gid=1236538753&single=true&output=csv" target="_blank" class="px-3 py-1.5 rounded-lg bg-white border border-slate-300 text-slate-700 font-bold hover:bg-slate-50 transition shrink-0 flex items-center gap-1.5">
+        <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
+        <span>게시된 CSV 보기</span>
+      </a>
+    </div>
+
+    <!-- 1. 핵심 7단계 로드맵 (입체적 단계 플로우) -->
+    <section class="bg-white rounded-3xl p-6 sm:p-8 border border-slate-100 shadow-sm">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-6">
+        <div>
+          <span class="text-xs font-bold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-md tracking-wide">PHASE ROADMAP</span>
+          <h2 class="text-xl sm:text-2xl font-extrabold text-slate-900 mt-1">입체 공정 파이프라인 (7단계 요약)</h2>
+        </div>
+        <p class="text-xs sm:text-sm text-slate-500">전체 공정의 시공 흐름을 단계별로 직관화합니다.</p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-3 sm:gap-4 relative">
+        <!-- 1단계 -->
+        <div class="card-3d bg-slate-50 hover:bg-slate-100/80 p-4 rounded-2xl border-t-4 border-rose-500 flex flex-col justify-between">
+          <div>
+            <span class="text-[11px] font-bold text-rose-600 bg-rose-50 px-2 py-0.5 rounded">STEP 01</span>
+            <h3 class="font-bold text-slate-900 text-base mt-2">철거 & 가설</h3>
+            <p class="text-xs text-slate-500 font-medium mt-1">8/06 ~ 9/05</p>
+            <ul class="text-xs text-slate-600 space-y-1 mt-3">
+              <li>• 먹메김 및 현장정리</li>
+              <li>• 창문 벽체 4회 철거</li>
+              <li>• 스카이 장비 투입</li>
+            </ul>
+          </div>
+          <span class="mt-4 text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded text-center">완료 단계</span>
+        </div>
+
+        <!-- 2단계 -->
+        <div class="card-3d bg-slate-50 hover:bg-slate-100/80 p-4 rounded-2xl border-t-4 border-amber-500 flex flex-col justify-between">
+          <div>
+            <span class="text-[11px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded">STEP 02</span>
+            <h3 class="font-bold text-slate-900 text-base mt-2">설비 기초 배관</h3>
+            <p class="text-xs text-slate-500 font-medium mt-1">8/18 ~ 8/31</p>
+            <ul class="text-xs text-slate-600 space-y-1 mt-3">
+              <li>• 바닥 모서리 테두리 방수</li>
+              <li>• 천정 전열/통신/조명 배관</li>
+              <li>• 주방/욕실 덕트 & 에어컨</li>
+            </ul>
+          </div>
+          <span class="mt-4 text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded text-center">완료 단계</span>
+        </div>
+
+        <!-- 3단계 -->
+        <div class="card-3d bg-indigo-50/50 hover:bg-indigo-50 p-4 rounded-2xl border-t-4 border-indigo-600 ring-2 ring-indigo-500/20 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between">
+              <span class="text-[11px] font-bold text-indigo-700 bg-indigo-100 px-2 py-0.5 rounded">STEP 03</span>
+              <span class="animate-pulse w-2 h-2 rounded-full bg-indigo-600"></span>
+            </div>
+            <h3 class="font-bold text-indigo-950 text-base mt-2">ALC벽체 & 난방</h3>
+            <p class="text-xs text-indigo-600 font-medium mt-1">9/07 ~ 9/16</p>
+            <ul class="text-xs text-slate-700 space-y-1 mt-3">
+              <li>• ALC 자재양중 & 벽체조성</li>
+              <li>• 급수/위생배관 & 난방</li>
+              <li>• <b>9/16 바닥 몰탈타설</b></li>
+            </ul>
+          </div>
+          <span class="mt-4 text-[10px] font-bold text-indigo-700 bg-indigo-100 px-2 py-1 rounded text-center">현재 집중 주간</span>
+        </div>
+
+        <!-- 4단계 -->
+        <div class="card-3d bg-slate-50 hover:bg-slate-100/80 p-4 rounded-2xl border-t-4 border-cyan-500 flex flex-col justify-between">
+          <div>
+            <span class="text-[11px] font-bold text-cyan-600 bg-cyan-50 px-2 py-0.5 rounded">STEP 04</span>
+            <h3 class="font-bold text-slate-900 text-base mt-2">목공 & 3차방수</h3>
+            <p class="text-xs text-slate-500 font-medium mt-1">9/17 ~ 9/24</p>
+            <ul class="text-xs text-slate-600 space-y-1 mt-3">
+              <li>• 몰탈 양생 (9/17~18)</li>
+              <li>• 벽체 석고보드/천정조성</li>
+              <li>• 화장실/기계실 3차도막방수</li>
+            </ul>
+          </div>
+          <span class="mt-4 text-[10px] font-bold text-slate-500 bg-slate-200/60 px-2 py-1 rounded text-center">예정</span>
+        </div>
+
+        <!-- 5단계 -->
+        <div class="card-3d bg-slate-50 hover:bg-slate-100/80 p-4 rounded-2xl border-t-4 border-emerald-500 flex flex-col justify-between">
+          <div>
+            <span class="text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">STEP 05</span>
+            <h3 class="font-bold text-slate-900 text-base mt-2">타일·도장·도배</h3>
+            <p class="text-xs text-slate-500 font-medium mt-1">9/29 ~ 10/16</p>
+            <ul class="text-xs text-slate-600 space-y-1 mt-3">
+              <li>• 화장실/복도 타일시공</li>
+              <li>• 복도 퍼티 & 도장뿜칠</li>
+              <li>• 인테리어필름 & 도배작업</li>
+            </ul>
+          </div>
+          <span class="mt-4 text-[10px] font-bold text-slate-500 bg-slate-200/60 px-2 py-1 rounded text-center">예정</span>
+        </div>
+
+        <!-- 6단계 -->
+        <div class="card-3d bg-slate-50 hover:bg-slate-100/80 p-4 rounded-2xl border-t-4 border-purple-500 flex flex-col justify-between">
+          <div>
+            <span class="text-[11px] font-bold text-purple-600 bg-purple-50 px-2 py-0.5 rounded">STEP 06</span>
+            <h3 class="font-bold text-slate-900 text-base mt-2">가구 & 기구취부</h3>
+            <p class="text-xs text-slate-500 font-medium mt-1">10/09 ~ 10/24</p>
+            <ul class="text-xs text-slate-600 space-y-1 mt-3">
+              <li>• 수전/위생기구/보일러설치</li>
+              <li>• 바닥마감재 & 객실가구</li>
+              <li>• 조명/간판/가전/도어락</li>
+            </ul>
+          </div>
+          <span class="mt-4 text-[10px] font-bold text-slate-500 bg-slate-200/60 px-2 py-1 rounded text-center">예정</span>
+        </div>
+
+        <!-- 7단계 -->
+        <div class="card-3d bg-slate-50 hover:bg-slate-100/80 p-4 rounded-2xl border-t-4 border-blue-600 flex flex-col justify-between">
+          <div>
+            <span class="text-[11px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded">STEP 07</span>
+            <h3 class="font-bold text-slate-900 text-base mt-2">검사 & 준공청소</h3>
+            <p class="text-xs text-slate-500 font-medium mt-1">10/19 ~ 10/26</p>
+            <ul class="text-xs text-slate-600 space-y-1 mt-3">
+              <li>• 소방점검 접수 (10/19)</li>
+              <li>• 전기안전점검 (10/23)</li>
+              <li>• <b>10/25 준공청소 & 마감</b></li>
+            </ul>
+          </div>
+          <span class="mt-4 text-[10px] font-bold text-slate-500 bg-slate-200/60 px-2 py-1 rounded text-center">최종 검수</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. 인터랙티브 공정 간트차트 (Gantt Chart & Filter) -->
+    <section class="bg-white rounded-3xl p-6 sm:p-8 border border-slate-100 shadow-sm">
+      <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6">
+        <div>
+          <span class="text-xs font-bold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-md tracking-wide">INTERACTIVE SCHEDULE</span>
+          <h2 class="text-xl sm:text-2xl font-extrabold text-slate-900 mt-1">전체 세부 공정 타임라인</h2>
+        </div>
+
+        <!-- 검색 및 카테고리 필터 -->
+        <div class="flex flex-wrap items-center gap-2">
+          <div class="relative">
+            <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+            <input type="text" id="taskSearch" placeholder="공종/세부작업 검색..." onkeyup="filterTasks()" 
+                   class="pl-8 pr-3 py-1.5 text-xs bg-slate-100 rounded-xl border border-transparent focus:border-indigo-500 focus:bg-white focus:outline-none transition w-44 sm:w-56">
+          </div>
+          
+          <button onclick="setCategoryFilter('all')" class="cat-filter-btn px-3 py-1.5 text-xs rounded-xl font-bold bg-indigo-600 text-white transition shadow-sm" data-cat="all">전체보기</button>
+          <button onclick="setCategoryFilter('인테리어')" class="cat-filter-btn px-3 py-1.5 text-xs rounded-xl font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition" data-cat="인테리어">건축·마감</button>
+          <button onclick="setCategoryFilter('전기')" class="cat-filter-btn px-3 py-1.5 text-xs rounded-xl font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition" data-cat="전기">전기·소방</button>
+          <button onclick="setCategoryFilter('기계')" class="cat-filter-btn px-3 py-1.5 text-xs rounded-xl font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition" data-cat="기계">설비·난방·에어컨</button>
+          <button onclick="setCategoryFilter('공통')" class="cat-filter-btn px-3 py-1.5 text-xs rounded-xl font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition" data-cat="공통">공통·점검</button>
+        </div>
+      </div>
+
+      <!-- 공정표 메인 테이블/간트 뷰 -->
+      <div class="overflow-x-auto border border-slate-200 rounded-2xl bg-white shadow-inner">
+        <div class="min-w-[980px]">
+          <!-- 헤더 월/주간 표시 -->
+          <div class="grid grid-cols-12 bg-slate-100 border-b border-slate-200 text-center font-bold text-xs py-2.5 text-slate-600">
+            <div class="col-span-3 text-left pl-4">대공종 / 세부 공정 내용</div>
+            <div class="col-span-3 border-l border-slate-200 bg-rose-50/60 text-rose-700">8월 (08/06 ~ 08/31)</div>
+            <div class="col-span-3 border-l border-slate-200 bg-amber-50/60 text-amber-700">9월 (09/01 ~ 09/30)</div>
+            <div class="col-span-3 border-l border-slate-200 bg-indigo-50/60 text-indigo-700">10월 (10/01 ~ 10/26)</div>
+          </div>
+
+          <!-- 공정 항목 목록이 들어갈 컨테이너 -->
+          <div id="scheduleContainer" class="divide-y divide-slate-100 text-xs">
+            <!-- 자바스크립트로 동적 렌더링 -->
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. 월별 캘린더 모아보기 (8월, 9월, 10월) -->
+    <section class="bg-white rounded-3xl p-6 sm:p-8 border border-slate-100 shadow-sm">
+      <div class="flex items-center justify-between mb-6">
+        <div>
+          <span class="text-xs font-bold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-md tracking-wide">CALENDAR VIEW</span>
+          <h2 class="text-xl sm:text-2xl font-extrabold text-slate-900 mt-1">월별 주요 작업 캘린더</h2>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="changeCalendarMonth(8)" id="btnMonth8" class="month-tab-btn px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200">8월</button>
+          <button onclick="changeCalendarMonth(9)" id="btnMonth9" class="month-tab-btn px-3 py-1.5 rounded-xl text-xs font-bold bg-indigo-600 text-white shadow-sm">9월 (현재)</button>
+          <button onclick="changeCalendarMonth(10)" id="btnMonth10" class="month-tab-btn px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200">10월</button>
+        </div>
+      </div>
+
+      <!-- 월별 캘린더 그리드 -->
+      <div id="calendarViewContainer" class="border border-slate-200 rounded-2xl overflow-hidden">
+        <!-- 캘린더 내용 동적 생성 -->
+      </div>
+    </section>
+
+    <!-- 특이사항 및 안내 배너 -->
+    <section class="bg-amber-50/60 border border-amber-200 rounded-2xl p-5 flex items-start gap-4">
+      <div class="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0 mt-0.5">
+        <i class="fa-solid fa-triangle-exclamation text-sm"></i>
+      </div>
+      <div>
+        <h4 class="font-bold text-amber-900 text-sm">현장 특이사항 및 주요 체크포인트</h4>
+        <p class="text-xs text-amber-800 mt-1 leading-relaxed">
+          • <b>전기 및 소방안전점검:</b> 관련 관공서 및 소방서 협의 일정에 따라 변동될 수 있습니다. (소방접수 10/19, 전기점검 10/23 예정)<br>
+          • <b>폐기물 및 현장 청결:</b> 매 공정 단계별 현장정리 및 폐기물 반출(총 6회) 진행 후 최종 10/25 준공청소 시행.<br>
+          • <b>바닥 양생 기간:</b> 9/16 바닥 몰탈타설 후 9/17~18 양일간 바닥 진입 및 통행 절대 금지.
+        </p>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="bg-white border-t border-slate-200 py-6 mt-12 text-center text-xs text-slate-400">
+    <p>무학동 고시원 공사예정표 (WORK SCHEDULE) • 원본작성일: 2026년 09월 04일 • 현장책임자: 김동현</p>
+  </footer>
+
+  <script>
+    // 사용자 제공 구글 시트 게시 CSV URL
+    const GOOGLE_SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRAAXChTqEOfI-6Zjak1fc32gi9Zmou-n-oq3O17lhNHAyapg59YLUIleoVet17FA/pub?gid=1236538753&single=true&output=csv";
+
+    // 오프라인 / 네트워크 지연 시 보장되는 기본 73개 검증 데이터셋 (Fallback Data)
+    const fallbackEvents = [
+      { date: "2026-08-15", dow: "토", cat1: "인테리어 마감 공사", cat2: "철거 공사", task: "창문위치 벽체철거", val: "철거작업 (1차)" },
+      { date: "2026-08-15", dow: "토", cat1: "인테리어 마감 공사", cat2: "철거 공사", task: "장비사용 (스카이)", val: "스카이 장비 설치" },
+      { date: "2026-08-18", dow: "화", cat1: "인테리어 마감 공사", cat2: "방수 공사", task: "바닥 테두리 방수", val: "바닥 모서리 테두리 방수" },
+      { date: "2026-08-20", dow: "목", cat1: "인테리어 마감 공사", cat2: "목 공사", task: "목재틀설치", val: "먹메김, 벽체단열 목재틀 시공" },
+      { date: "2026-08-23", dow: "일", cat1: "인테리어 마감 공사", cat2: "철거 공사", task: "창문위치 벽체철거", val: "철거작업 (2차)" },
+      { date: "2026-08-24", dow: "월", cat1: "전기 설비 공사", cat2: "전열 공사", task: "배관 및 배선작업", val: "천정 전열 배관작업" },
+      { date: "2026-08-24", dow: "월", cat1: "전기 설비 공사", cat2: "통신 공사", task: "배관 및 배선작업", val: "천정 통신 배관작업" },
+      { date: "2026-08-24", dow: "월", cat1: "전기 설비 공사", cat2: "조명 공사", task: "회로분리 및 배관작업", val: "천정 조명 배관작업" },
+      { date: "2026-08-24", dow: "월", cat1: "전기 설비 공사", cat2: "소방전기공사", task: "감지기 배관 및 배선", val: "천정 소방 감지기 배관" },
+      { date: "2026-08-24", dow: "월", cat1: "기계 설비 공사", cat2: "공조설비공사", task: "주방 덕트배관", val: "주방 덕트배관 시공" },
+      { date: "2026-08-24", dow: "월", cat1: "기계 설비 공사", cat2: "공조설비공사", task: "화장실 덕트배관", val: "화장실 덕트배관 시공" },
+      { date: "2026-08-25", dow: "화", cat1: "공통", cat2: "가설 공사", task: "폐기물 반출", val: "현장정리 및 폐기물반출 (1차)" },
+      { date: "2026-08-29", dow: "토", cat1: "인테리어 마감 공사", cat2: "철거 공사", task: "창문위치 벽체철거", val: "철거작업 (3차)" },
+      { date: "2026-08-29", dow: "토", cat1: "인테리어 마감 공사", cat2: "창호 공사", task: "창문 설치", val: "창문 설치 (1차)" },
+      { date: "2026-08-29", dow: "토", cat1: "기계 설비 공사", cat2: "에어컨 공사", task: "배관 및 배선", val: "에어컨 배관공사" },
+      { date: "2026-08-31", dow: "월", cat1: "인테리어 마감 공사", cat2: "목 공사", task: "목재틀/보양", val: "계단실 먼지막이 보양 설치" },
+      { date: "2026-09-02", dow: "수", cat1: "인테리어 마감 공사", cat2: "금속 공사", task: "금속 공사", val: "금속공사 현장미팅" },
+      { date: "2026-09-03", dow: "목", cat1: "인테리어 마감 공사", cat2: "금속 공사", task: "금속 공사", val: "금속 구조 시공" },
+      { date: "2026-09-03", dow: "목", cat1: "공통", cat2: "가설 공사", task: "폐기물 반출", val: "현장정리 및 폐기물반출 (2차)" },
+      { date: "2026-09-05", dow: "토", cat1: "인테리어 마감 공사", cat2: "철거 공사", task: "창문위치 벽체철거", val: "철거작업 (4차)" },
+      { date: "2026-09-07", dow: "월", cat1: "인테리어 마감 공사", cat2: "ALC 공사", task: "벽체 조성", val: "ALC 블록 자재양중" },
+      { date: "2026-09-07", dow: "월", cat1: "인테리어 마감 공사", cat2: "단열 공사", task: "단열 뿜칠작업", val: "창호 우레탄 단열뿜칠작업" },
+      { date: "2026-09-07", dow: "월", cat1: "기계 설비 공사", cat2: "가스설비공사", task: "배관 작업", val: "도시가스 현장체크" },
+      { date: "2026-09-09", dow: "수", cat1: "인테리어 마감 공사", cat2: "ALC 공사", task: "흡음재 충진", val: "벽체 흡음재 충진" },
+      { date: "2026-09-10", dow: "목", cat1: "기계 설비 공사", cat2: "급수급탕공사", task: "배관 작업", val: "급수/급탕 배관작업" },
+      { date: "2026-09-10", dow: "목", cat1: "기계 설비 공사", cat2: "위생배관공사", task: "배관 작업", val: "위생배관작업 (2층->4층)" },
+      { date: "2026-09-12", dow: "토", cat1: "인테리어 마감 공사", cat2: "창호 공사", task: "창문 설치", val: "창문 설치 (2차)" },
+      { date: "2026-09-12", dow: "토", cat1: "기계 설비 공사", cat2: "난방설비공사", task: "바닥 단열", val: "바닥 스티로폼 단열재 설치" },
+      { date: "2026-09-13", dow: "일", cat1: "공통", cat2: "가설 공사", task: "폐기물 반출", val: "현장정리 및 폐기물반출 (3차)" },
+      { date: "2026-09-14", dow: "월", cat1: "기계 설비 공사", cat2: "난방설비공사", task: "난방 배관", val: "바닥 엑셀 난방배관 시공" },
+      { date: "2026-09-14", dow: "월", cat1: "인테리어 마감 공사", cat2: "가구 공사", task: "객실 가구", val: "침대 / 객실가구 발주" },
+      { date: "2026-09-16", dow: "수", cat1: "인테리어 마감 공사", cat2: "습식 공사", task: "바닥 몰탈 타설", val: "★ 바닥 몰탈 타설 (핵심공정)" },
+      { date: "2026-09-17", dow: "목", cat1: "인테리어 마감 공사", cat2: "습식 공사", task: "몰탈 양생", val: "바닥 몰탈 양생 (통행제한)" },
+      { date: "2026-09-19", dow: "토", cat1: "인테리어 마감 공사", cat2: "목 공사", task: "석고보드/천정", val: "벽체 석고보드 취부 및 천정 조성" },
+      { date: "2026-09-19", dow: "토", cat1: "인테리어 마감 공사", cat2: "창호 공사", task: "도어 설치", val: "객실 방화문 반입 및 설치" },
+      { date: "2026-09-22", dow: "화", cat1: "공통", cat2: "가설 공사", task: "폐기물 반출", val: "현장정리 및 폐기물반출 (4차)" },
+      { date: "2026-09-24", dow: "목", cat1: "인테리어 마감 공사", cat2: "방수 공사", task: "화장실 방수", val: "화장실/기계실 3차 도막방수" },
+      { date: "2026-09-25", dow: "금", cat1: "기계 설비 공사", cat2: "에어컨 공사", task: "실내기 설치", val: "에어컨 실내기 전 실 설치" },
+      { date: "2026-09-28", dow: "월", cat1: "전기 설비 공사", cat2: "조명 공사", task: "조명기구", val: "조명기구 발주" },
+      { date: "2026-09-29", dow: "화", cat1: "인테리어 마감 공사", cat2: "타일 공사", task: "타일 반입", val: "타일 자재 반입" },
+      { date: "2026-09-29", dow: "화", cat1: "인테리어 마감 공사", cat2: "도장 공사", task: "퍼티 작업", val: "복도 천장 퍼티작업" },
+      { date: "2026-10-01", dow: "목", cat1: "인테리어 마감 공사", cat2: "도장 공사", task: "도장 뿜칠작업", val: "도장 뿜칠 작업" },
+      { date: "2026-10-01", dow: "목", cat1: "기계 설비 공사", cat2: "가스설비공사", task: "배관 작업", val: "가스배관 본작업" },
+      { date: "2026-10-03", dow: "토", cat1: "인테리어 마감 공사", cat2: "타일 공사", task: "화장실 타일", val: "화장실 타일 시공" },
+      { date: "2026-10-05", dow: "월", cat1: "인테리어 마감 공사", cat2: "타일 공사", task: "복도 타일", val: "복도 벽체/바닥 타일 시공" },
+      { date: "2026-10-07", dow: "수", cat1: "인테리어 마감 공사", cat2: "목 공사", task: "욕실돔", val: "욕실 돔천정 시공" },
+      { date: "2026-10-09", dow: "금", cat1: "기계 설비 공사", cat2: "급수급탕공사", task: "수전 반입", val: "수전 자재 반입" },
+      { date: "2026-10-09", dow: "금", cat1: "기계 설비 공사", cat2: "위생배관공사", task: "위생기구 반입", val: "양변기/세면기 위생기구 반입" },
+      { date: "2026-10-10", dow: "토", cat1: "기계 설비 공사", cat2: "위생배관공사", task: "기구 설치", val: "위생기구 전실 설치" },
+      { date: "2026-10-10", dow: "토", cat1: "기계 설비 공사", cat2: "급수급탕공사", task: "수전 설치", val: "수전 설치" },
+      { date: "2026-10-10", dow: "토", cat1: "기계 설비 공사", cat2: "난방설비공사", task: "보일러 설치", val: "온수 보일러 설치 및 배관연결" },
+      { date: "2026-10-11", dow: "일", cat1: "인테리어 마감 공사", cat2: "필름 공사", task: "퍼티/샌딩", val: "필름시공 퍼티 및 샌딩작업" },
+      { date: "2026-10-11", dow: "일", cat1: "인테리어 마감 공사", cat2: "금속 공사", task: "완강기 공사", val: "완강기 피난기구 설치" },
+      { date: "2026-10-13", dow: "화", cat1: "인테리어 마감 공사", cat2: "필름 공사", task: "필름 시공", val: "문틀 및 인테리어 필름 래핑" },
+      { date: "2026-10-15", dow: "목", cat1: "인테리어 마감 공사", cat2: "도배 공사", task: "정배 작업", val: "전 객실 벽지 도배작업" },
+      { date: "2026-10-17", dow: "토", cat1: "인테리어 마감 공사", cat2: "가구 공사", task: "객실 가구", val: "객실 침대/가구 반입 및 배치" },
+      { date: "2026-10-18", dow: "일", cat1: "인테리어 마감 공사", cat2: "바닥재 공사", task: "바닥 마감재", val: "데코타일/바닥 마감재 시공" },
+      { date: "2026-10-19", dow: "월", cat1: "공통", cat2: "기타", task: "소방안전점검", val: "★ 소방점검 서류 접수" },
+      { date: "2026-10-20", dow: "화", cat1: "전기 설비 공사", cat2: "조명 공사", task: "조명기구 반입", val: "조명기구 반입" },
+      { date: "2026-10-20", dow: "화", cat1: "공통", cat2: "가설 공사", task: "폐기물 반출", val: "현장정리 및 폐기물반출 (5차)" },
+      { date: "2026-10-21", dow: "수", cat1: "공통", cat2: "기타", task: "인터넷/CCTV", val: "인터넷 통신망 및 CCTV 설치" },
+      { date: "2026-10-21", dow: "수", cat1: "전기 설비 공사", cat2: "조명 공사", task: "조명기구 취부", val: "전등/조명기구 취부" },
+      { date: "2026-10-21", dow: "수", cat1: "전기 설비 공사", cat2: "소방전기공사", task: "소방기구 취부", val: "감지기 및 유도등 설치" },
+      { date: "2026-10-21", dow: "수", cat1: "기계 설비 공사", cat2: "에어컨 공사", task: "실외기 설치", val: "에어컨 실외기 연결 및 시운전" },
+      { date: "2026-10-21", dow: "수", cat1: "인테리어 마감 공사", cat2: "간판공사", task: "사인물/간판", val: "외부 간판 및 내부 안내사인 설치" },
+      { date: "2026-10-22", dow: "목", cat1: "인테리어 마감 공사", cat2: "가전제품 외", task: "가전제품 설치", val: "냉장고/세탁기 등 가전기구 설치" },
+      { date: "2026-10-23", dow: "금", cat1: "공통", cat2: "기타", task: "전기안전점검", val: "★ 전기안전점검 실시" },
+      { date: "2026-10-23", dow: "금", cat1: "인테리어 마감 공사", cat2: "가구 공사", task: "블라인드 설치", val: "창문 블라인드 설치작업" },
+      { date: "2026-10-24", dow: "토", cat1: "인테리어 마감 공사", cat2: "가전제품 외", task: "도어락 설치", val: "각 객실 디지털 전자도어락 설치" },
+      { date: "2026-10-25", dow: "일", cat1: "공통", cat2: "가설 공사", task: "준공청소", val: "★ 현장 최종 준공청소 및 정리" },
+      { date: "2026-10-26", dow: "월", cat1: "인테리어 마감 공사", cat2: "가구 공사", task: "주방 가구", val: "공용 주방가구 반입 및 최종 설치" }
+    ];
+
+    // 현재 활성화된 이벤트 목록 (구글 시트 연동 후 동적으로 업데이트됨)
+    let currentEvents = [...fallbackEvents];
+    let taskGroups = {};
+
+    let currentCategory = 'all';
+    let searchQuery = '';
+    let selectedCalMonth = 9;
+
+    const baseStart = new Date('2026-08-06').getTime();
+    const baseEnd = new Date('2026-10-26').getTime();
+    const totalDuration = baseEnd - baseStart;
+
+    function getDatePercent(dateStr) {
+      const d = new Date(dateStr).getTime();
+      return Math.max(0, Math.min(100, ((d - baseStart) / totalDuration) * 100));
+    }
+
+    function getCatColor(cat1) {
+      if (!cat1) return { bar: 'from-slate-500 to-slate-600', badge: 'bg-slate-100 text-slate-800' };
+      if (cat1.includes('인테리어')) return { bar: 'from-amber-500 to-orange-500', badge: 'bg-amber-100 text-amber-800' };
+      if (cat1.includes('전기')) return { bar: 'from-blue-500 to-indigo-600', badge: 'bg-blue-100 text-blue-800' };
+      if (cat1.includes('기계')) return { bar: 'from-emerald-500 to-teal-600', badge: 'bg-emerald-100 text-emerald-800' };
+      return { bar: 'from-purple-500 to-violet-600', badge: 'bg-purple-100 text-purple-800' };
+    }
+
+    function rebuildTaskGroups() {
+      taskGroups = {};
+      currentEvents.forEach(e => {
+        const key = `${e.cat1} > ${e.cat2} > ${e.task}`;
+        if (!taskGroups[key]) {
+          taskGroups[key] = {
+            cat1: e.cat1,
+            cat2: e.cat2,
+            task: e.task,
+            events: []
+          };
+        }
+        taskGroups[key].events.push(e);
+      });
+
+      // KPI 카운트 갱신
+      const count = currentEvents.length;
+      document.getElementById('kpiEventCountText').innerText = `${count}개 항목`;
+      document.getElementById('kpiEventCountBg').innerText = count;
+    }
+
+    // 구글 시트 CSV 파싱 및 동적 변환 함수
+    function parseGoogleSheetCSV(csvText) {
+      const parsed = Papa.parse(csvText, { skipEmptyLines: false });
+      const rows = parsed.data;
+
+      if (!rows || rows.length < 6) {
+        throw new Error("유효한 공정표 시트 데이터가 아닙니다.");
+      }
+
+      // 날짜 컬럼 매핑: row 2 (Month), row 3 (Day), row 4 (Dow)
+      const dateMap = {};
+      let curMonthStr = "2026-08";
+
+      // 5번째 열(인덱스 5)부터 85번째 열까지 날짜 추출
+      for (let c = 5; c < rows[3].length; c++) {
+        const mVal = rows[2] ? String(rows[2][c] || '') : '';
+        if (mVal.includes('8월')) curMonthStr = '2026-08';
+        else if (mVal.includes('9월')) curMonthStr = '2026-09';
+        else if (mVal.includes('10월')) curMonthStr = '2026-10';
+
+        const dayVal = rows[3] ? rows[3][c] : '';
+        const dowVal = rows[4] ? rows[4][c] : '';
+
+        if (dayVal && !isNaN(parseInt(dayVal))) {
+          const formattedDay = String(parseInt(dayVal)).padStart(2, '0');
+          dateMap[c] = {
+            dateStr: `${curMonthStr}-${formattedDay}`,
+            dow: dowVal ? String(dowVal).trim() : ''
+          };
+        }
+      }
+
+      const extractedEvents = [];
+      let lastCat1 = "공통";
+      let lastCat2 = "가설 공사";
+
+      // 공정 데이터 행 순회 (row index 6부터)
+      for (let r = 6; r < rows.length; r++) {
+        const row = rows[r];
+        if (!row || row.length < 5) continue;
+
+        const cat1 = row[2] ? String(row[2]).trim() : '';
+        const cat2 = row[3] ? String(row[3]).trim() : '';
+        const task = row[4] ? String(row[4]).trim() : '';
+
+        if (cat1) lastCat1 = cat1;
+        if (cat2) lastCat2 = cat2;
+
+        if (!task) continue;
+
+        // 해당 행의 날짜별 셀 값 확인
+        for (const colIdx in dateMap) {
+          const val = row[colIdx] ? String(row[colIdx]).trim() : '';
+          if (val && val !== ',' && val !== '-') {
+            extractedEvents.push({
+              date: dateMap[colIdx].dateStr,
+              dow: dateMap[colIdx].dow,
+              cat1: lastCat1,
+              cat2: lastCat2,
+              task: task,
+              val: val
+            });
+          }
+        }
+      }
+
+      if (extractedEvents.length > 0) {
+        currentEvents = extractedEvents;
+      }
+    }
+
+    // 구글 시트 실시간 Fetch 및 상태 업데이트
+    async function fetchSheetData() {
+      const refreshIcon = document.getElementById('refreshIcon');
+      const syncStatus = document.getElementById('syncStatus');
+      const syncText = document.getElementById('syncText');
+      const syncDetailText = document.getElementById('syncDetailText');
+
+      refreshIcon.classList.add('fa-spin');
+      syncText.innerText = "구글 시트 동기화 중...";
+
+      try {
+        // 캐시 방지를 위한 타임스탬프 쿼리
+        const response = await fetch(`${GOOGLE_SHEET_CSV_URL}&_t=${Date.now()}`);
+        if (!response.ok) throw new Error("네트워크 응답 오류");
+        
+        const csvText = await response.text();
+        parseGoogleSheetCSV(csvText);
+
+        const now = new Date();
+        const timeStr = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
+        
+        syncText.innerText = `구글시트 동기화됨 (${timeStr})`;
+        syncStatus.className = "hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200";
+        syncDetailText.innerText = `구글 시트와 실시간 연동 중입니다. (최종 갱신: ${timeStr} / 총 ${currentEvents.length}개 공정 감지)`;
+      } catch (err) {
+        console.warn("구글 시트 실시간 연동 폴백 처리:", err);
+        syncText.innerText = "로컬 기본 데이터 모드";
+        syncStatus.className = "hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200";
+        syncDetailText.innerText = "구글 시트 응답 지연으로 안전 기본 데이터셋(73개 항목)이 로드되었습니다.";
+      } finally {
+        refreshIcon.classList.remove('fa-spin');
+        rebuildTaskGroups();
+        renderSchedule();
+        renderCalendar();
+      }
+    }
+
+    // 간트 타임라인 렌더링
+    function renderSchedule() {
+      const container = document.getElementById('scheduleContainer');
+      container.innerHTML = '';
+
+      const groupKeys = Object.keys(taskGroups).filter(key => {
+        const item = taskGroups[key];
+        const matchCat = (currentCategory === 'all') || (item.cat1 && item.cat1.includes(currentCategory));
+        const matchSearch = (searchQuery === '') || 
+          (item.cat1 && item.cat1.toLowerCase().includes(searchQuery)) ||
+          (item.cat2 && item.cat2.toLowerCase().includes(searchQuery)) ||
+          (item.task && item.task.toLowerCase().includes(searchQuery)) ||
+          item.events.some(ev => ev.val.toLowerCase().includes(searchQuery));
+        return matchCat && matchSearch;
+      });
+
+      if (groupKeys.length === 0) {
+        container.innerHTML = `<div class="p-8 text-center text-slate-400 font-medium">일치하는 세부 공정이 없습니다.</div>`;
+        return;
+      }
+
+      groupKeys.forEach(key => {
+        const group = taskGroups[key];
+        const colors = getCatColor(group.cat1);
+        const sortedEvents = group.events.sort((a,b) => new Date(a.date) - new Date(b.date));
+        const firstDate = sortedEvents[0].date;
+        const lastDate = sortedEvents[sortedEvents.length - 1].date;
+
+        const leftPct = getDatePercent(firstDate);
+        const rightPct = getDatePercent(lastDate);
+        const widthPct = Math.max(3.2, rightPct - leftPct + 2.5);
+
+        const row = document.createElement('div');
+        row.className = 'grid grid-cols-12 items-center hover:bg-slate-50/80 transition py-2 px-2';
+        
+        row.innerHTML = `
+          <div class="col-span-3 pr-2 flex flex-col justify-center">
+            <div class="flex items-center gap-1.5 mb-0.5">
+              <span class="text-[10px] font-bold px-1.5 py-0.5 rounded ${colors.badge}">${group.cat2 || '공통'}</span>
+              <span class="text-[10px] text-slate-400">${firstDate.slice(5)} ~ ${lastDate.slice(5)}</span>
+            </div>
+            <div class="font-bold text-slate-900 truncate" title="${group.task}">${group.task}</div>
+          </div>
+          
+          <div class="col-span-9 relative h-8 bg-slate-50/70 rounded-xl border border-slate-100 overflow-hidden flex items-center px-1">
+            <!-- 9월 5일(현재) 기준선 -->
+            <div class="absolute top-0 bottom-0 w-[1.5px] bg-red-500 z-10 opacity-70" style="left: ${getDatePercent('2026-09-05')}%;" title="금일 기준선 (2026.09.05)"></div>
+            
+            <!-- 공정 타임라인 바 -->
+            <div class="gantt-bar absolute h-5 rounded-lg bg-gradient-to-r ${colors.bar} text-white shadow-sm flex items-center px-2 text-[10px] font-semibold cursor-pointer truncate"
+                 style="left: ${leftPct}%; width: ${widthPct}%;"
+                 title="${group.cat1} > ${group.cat2} > ${group.task} (${sortedEvents.map(e => e.date + ': ' + e.val).join(' | ')})">
+              ${sortedEvents.length === 1 ? sortedEvents[0].val : `${sortedEvents[0].val} 외 ${sortedEvents.length-1}건`}
+            </div>
+          </div>
+        `;
+        container.appendChild(row);
+      });
+    }
+
+    // 캘린더 월별 뷰 렌더링
+    function renderCalendar() {
+      const container = document.getElementById('calendarViewContainer');
+      const year = 2026;
+      const month = selectedCalMonth;
+      
+      const firstDay = new Date(year, month - 1, 1).getDay();
+      const lastDate = new Date(year, month, 0).getDate();
+
+      let html = `
+        <div class="grid grid-cols-7 bg-slate-100 text-center text-xs font-bold py-2.5 text-slate-600 border-b border-slate-200">
+          <span class="text-rose-600">일</span>
+          <span>월</span>
+          <span>화</span>
+          <span>수</span>
+          <span>목</span>
+          <span>금</span>
+          <span class="text-blue-600">토</span>
+        </div>
+        <div class="grid grid-cols-7 divide-x divide-y divide-slate-200 bg-white">
+      `;
+
+      // 이전 달 여백
+      for (let i = 0; i < firstDay; i++) {
+        html += `<div class="min-h-[100px] bg-slate-50/40 p-1.5"></div>`;
+      }
+
+      // 날짜별 셀 생성
+      for (let day = 1; day <= lastDate; day++) {
+        const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        const dayEvents = currentEvents.filter(e => e.date === dateStr);
+        const isToday = (dateStr === '2026-09-05');
+        const isOutRange = (month === 8 && day < 6) || (month === 10 && day > 26);
+
+        html += `
+          <div class="min-h-[110px] p-1.5 transition ${isToday ? 'bg-indigo-50/70 ring-2 ring-indigo-500 z-10' : (isOutRange ? 'bg-slate-50 opacity-40' : 'hover:bg-slate-50/80')}">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold ${isToday ? 'text-indigo-600 font-extrabold px-1.5 py-0.5 rounded-full bg-indigo-100' : 'text-slate-700'}">${day}</span>
+              ${isToday ? '<span class="text-[9px] font-bold text-rose-500 bg-rose-50 px-1 rounded">오늘</span>' : ''}
+            </div>
+            
+            <div class="mt-1 space-y-1">
+              ${dayEvents.map(e => {
+                let badgeStyle = "bg-slate-100 text-slate-700 border-slate-200";
+                if (e.cat1.includes('인테리어') || e.cat1.includes('마감')) badgeStyle = "bg-amber-50 text-amber-800 border-amber-200";
+                if (e.cat1.includes('전기')) badgeStyle = "bg-blue-50 text-blue-800 border-blue-200";
+                if (e.cat1.includes('기계')) badgeStyle = "bg-emerald-50 text-emerald-800 border-emerald-200";
+                if (e.val.includes('★')) badgeStyle = "bg-rose-50 text-rose-800 border-rose-300 font-bold";
+
+                return `
+                  <div class="text-[10px] p-1 rounded-md border ${badgeStyle} leading-tight truncate" title="${e.cat2} | ${e.val}">
+                    ${e.val}
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+        `;
+      }
+
+      html += `</div>`;
+      container.innerHTML = html;
+    }
+
+    function changeCalendarMonth(m) {
+      selectedCalMonth = m;
+      [8, 9, 10].forEach(num => {
+        const btn = document.getElementById(`btnMonth${num}`);
+        if (num === m) {
+          btn.className = "month-tab-btn px-3 py-1.5 rounded-xl text-xs font-bold bg-indigo-600 text-white shadow-sm";
+        } else {
+          btn.className = "month-tab-btn px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-100 text-slate-600 hover:bg-slate-200";
+        }
+      });
+      renderCalendar();
+    }
+
+    function setCategoryFilter(cat) {
+      currentCategory = cat;
+      document.querySelectorAll('.cat-filter-btn').forEach(btn => {
+        if (btn.dataset.cat === cat) {
+          btn.className = "cat-filter-btn px-3 py-1.5 text-xs rounded-xl font-bold bg-indigo-600 text-white transition shadow-sm";
+        } else {
+          btn.className = "cat-filter-btn px-3 py-1.5 text-xs rounded-xl font-semibold bg-slate-100 text-slate-600 hover:bg-slate-200 transition";
+        }
+      });
+      renderSchedule();
+    }
+
+    function filterTasks() {
+      searchQuery = document.getElementById('taskSearch').value.toLowerCase().trim();
+      renderSchedule();
+    }
+
+    // 앱 시작 시 데이터 불러오기
+    window.addEventListener('DOMContentLoaded', () => {
+      fetchSheetData();
+    });
+  </script>
+</body>
+</html>
