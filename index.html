@@ -1207,6 +1207,7 @@
       if (!site) return;
 
       currentActiveSiteId = siteId;
+      selectedCalMonth = null; // 현장 진입 시 캘린더 월을 금일 월로 우선 자동 재설정
       document.getElementById('portalViewContainer').classList.add('hidden');
       document.getElementById('detailViewContainer').classList.remove('hidden');
 
@@ -1580,16 +1581,29 @@
         m = (m % 12) + 1;
       }
 
+      // 금일(오늘)에 해당하는 월을 우선적으로 기본 선택
+      const todayMonth = parseInt(TODAY_M, 10);
       if (!selectedCalMonth || !months.includes(selectedCalMonth)) {
-        selectedCalMonth = months[0];
+        if (months.includes(todayMonth)) {
+          selectedCalMonth = todayMonth;
+        } else if (TODAY_STR < site.startDate) {
+          selectedCalMonth = months[0];
+        } else {
+          selectedCalMonth = months[months.length - 1];
+        }
       }
 
-      monthButtonsContainer.innerHTML = months.map(monthNum => `
-        <button onclick="changeDetailCalMonth(${monthNum})" 
-                class="px-3 py-1.5 rounded-xl text-xs font-bold transition ${selectedCalMonth === monthNum ? 'bg-indigo-600 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}">
-          ${monthNum}월
-        </button>
-      `).join('');
+      monthButtonsContainer.innerHTML = months.map(monthNum => {
+        const isTodayMonth = (monthNum === todayMonth);
+        const isSelected = (selectedCalMonth === monthNum);
+        return `
+          <button onclick="changeDetailCalMonth(${monthNum})" 
+                  class="px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${isSelected ? 'bg-indigo-600 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}">
+            <span>${monthNum}월</span>
+            ${isTodayMonth ? `<span class="text-[9px] px-1.5 py-0.2 rounded font-black ${isSelected ? 'bg-indigo-700 text-indigo-100' : 'bg-indigo-100 text-indigo-700'}">금월</span>` : ''}
+          </button>
+        `;
+      }).join('');
 
       const year = startD.getFullYear();
       const firstDay = new Date(year, selectedCalMonth - 1, 1).getDay();
